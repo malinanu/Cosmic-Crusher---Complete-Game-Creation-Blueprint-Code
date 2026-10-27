@@ -316,9 +316,13 @@ async function runYouTube(browser, base) {
   await page.evaluate(() => { CC.game.flags.god = true; });
   await wait(page, 2000);
   for (let i = 0; i < 9; i++) { await holdMouse(page, '#dpRight', 800); await wait(page, 250); }
+  // Spinning in the red zone can end in a stumble, which blocks jumping for
+  // a second; wait until a jump is allowed.
+  await page.waitForFunction(() => CC.game.stumble === 0 && CC.game.jumpCooldown === 0 && !CC.game.jump, null, { polling: 100, timeout: 5000 }).catch(() => {});
   await page.click('#btnBoost');
   await wait(page, 150);
-  check(await page.evaluate(() => !!CC.game.jump), 'mouse click on BOOST/SLAM jumps');
+  const jumped = await page.evaluate(() => ({ jump: !!CC.game.jump, state: CC.game.state, stumble: CC.game.stumble, cooldown: CC.game.jumpCooldown }));
+  check(jumped.jump, `mouse click on BOOST/SLAM jumps (${jumped.state}, stumble ${jumped.stumble}, cooldown ${jumped.cooldown})`);
   await wait(page, 900);
   const crushed = await page.evaluate(() => CC.game.crushes);
   check(crushed > 0, `mouse-held D-pad spins and crushes (crushes=${crushed})`);
@@ -342,8 +346,8 @@ async function runYouTube(browser, base) {
   await page.click('#pause button:has-text("RESUME")');
   const t1 = await page.evaluate(() => CC.game.t);
   await wait(page, 400);
-  const after = await page.evaluate(() => ({ t: CC.game.t, state: CC.game.state, running: CC.loop.running, screens: [...document.querySelectorAll('.screen.show')].map((s) => s.id).join(',') }));
-  check(after.t > t1, `game runs again after RESUME (t ${t1} -> ${after.t}, ${after.state}, loop ${after.running}, screens [${after.screens}])`);
+  const after = await page.evaluate(() => ({ t: CC.game.t, state: CC.game.state, running: CC.loop.running, kicks: CC.loop.kicks, screens: [...document.querySelectorAll('.screen.show')].map((s) => s.id).join(',') }));
+  check(after.t > t1, `game runs again after RESUME (t ${t1} -> ${after.t}, ${after.state}, loop ${after.running}, screens [${after.screens}], frame watchdog kicks ${after.kicks})`);
 
   // YouTube audio setting
   await page.evaluate(() => __yt.setAudio(false));
@@ -452,10 +456,14 @@ async function runCapacitor(browser, base) {
 // requestAnimationFrame doesn't run. The game must still load and report ready.
 function freezeFrames() {
   const real = window.requestAnimationFrame.bind(window);
-  let queue = [];
+  const realCancel = window.cancelAnimationFrame.bind(window);
+  const queue = new Map();
+  let id = 0;
   window.__frozen = true;
-  window.requestAnimationFrame = (cb) => { if (window.__frozen) { queue.push(cb); return 0; } return real(cb); };
-  window.__unfreeze = () => { window.__frozen = false; const q = queue; queue = []; q.forEach((cb) => real(cb)); };
+  // Held requests get negative ids so cancelling them works like the real thing.
+  window.requestAnimationFrame = (cb) => { if (window.__frozen) { queue.set(--id, cb); return id; } return real(cb); };
+  window.cancelAnimationFrame = (n) => { if (!queue.delete(n)) realCancel(n); };
+  window.__unfreeze = () => { window.__frozen = false; const q = [...queue.values()]; queue.clear(); q.forEach((cb) => real(cb)); };
 }
 
 async function runHiddenBoot(browser, base) {

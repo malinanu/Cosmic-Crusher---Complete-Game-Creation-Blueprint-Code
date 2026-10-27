@@ -126,8 +126,10 @@
   }
 
   function makeLoop(game) {
-    var raf = 0, last = 0, acc = 0;
+    var on = false, raf = 0, last = 0, acc = 0;
+    var watchdog = 0, ticked = false, kicks = 0;
     function frame() {
+      ticked = true;
       raf = requestAnimationFrame(frame);
       // Measure with performance.now(): after a resume some engines (WebKit)
       // pass a stale frame timestamp from before the pause, which would make
@@ -146,18 +148,36 @@
       game.render(acc / STEP);
       CC.hud.update(game);
     }
+    // WebKit can drop the frame request made just after a resume, leaving
+    // the game frozen on screen. If a visible, running loop gets no frame
+    // for a while, draw one from a timer: that also asks for a fresh frame.
+    function check() {
+      var visible = document.visibilityState !== 'hidden' && innerWidth > 0 && innerHeight > 0;
+      if (!ticked && visible) {
+        kicks++;
+        cancelAnimationFrame(raf);
+        frame();
+      }
+      ticked = false;
+    }
     return {
       start: function () {
-        if (raf) return;
+        if (on) return;
+        on = true;
         last = performance.now();
         acc = 0;
+        ticked = false;
         raf = requestAnimationFrame(frame);
+        watchdog = setInterval(check, 250);
       },
       stop: function () {
+        on = false;
         cancelAnimationFrame(raf);
-        raf = 0;
+        clearInterval(watchdog);
+        raf = watchdog = 0;
       },
-      get running() { return raf !== 0; }
+      get running() { return on; },
+      get kicks() { return kicks; }
     };
   }
 
