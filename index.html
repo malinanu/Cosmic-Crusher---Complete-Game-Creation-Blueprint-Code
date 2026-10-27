@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070818">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="description" content="Cosmic Crusher: spin the planet to crush alien invaders.">
+  <title>Cosmic Crusher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Russo+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- ===================== HUD ===================== -->
+  <div id="hud" class="hidden" aria-hidden="true">
+    <div class="hud-tl">
+      <div class="health">
+        <svg class="heart" viewBox="0 0 64 56" aria-hidden="true">
+          <defs>
+            <linearGradient id="heartFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ff6b6b"/><stop offset="1" stop-color="#c8102e"/>
+            </linearGradient>
+          </defs>
+          <path d="M32 52 C10 38 3 28 3 17 C3 8 10 3 18 3 C24 3 29 6 32 11 C35 6 40 3 46 3 C54 3 61 8 61 17 C61 28 54 38 32 52 Z"
+                fill="url(#heartFill)" stroke="#3a0618" stroke-width="4" stroke-linejoin="round"/>
+          <ellipse cx="17" cy="15" rx="6" ry="4" fill="#ffd0d0" opacity=".85" transform="rotate(-30 17 15)"/>
+        </svg>
+        <div class="bar hp"><div id="hpFill" class="fill"></div></div>
+      </div>
+      <div class="score">SCORE: <span id="score">0</span></div>
+      <div class="wave">
+        <span id="waveText">WAVE 1</span>
+        <svg class="wave-ring" viewBox="0 0 36 36" aria-hidden="true">
+          <circle cx="18" cy="18" r="14" class="track"/>
+          <circle id="waveRing" cx="18" cy="18" r="14" class="prog"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="hud-tr">
+      <div class="super-wrap">
+        <div class="bar super"><div id="superFill" class="fill"></div></div>
+        <div class="super-label" id="superLabel">SUPER BAR</div>
+      </div>
+      <div class="hud-icons">
+        <button id="btnPause" class="icon-btn" aria-label="Pause">
+          <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        </button>
+        <button id="btnSound" class="icon-btn" aria-label="Sound on/off">
+          <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="waves" d="M16 8.5c1.5 1.8 1.5 5.2 0 7M18.5 6c3 3.3 3 8.7 0 12" fill="none" stroke-width="2" stroke-linecap="round"/><path class="mute" d="M16 9l5 6M21 9l-5 6" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="selector" class="selector">
+      <div class="selector-label">OBJECT SELECTOR</div>
+      <div class="selector-row">
+        <button data-planet="mars" aria-label="Mars"><canvas width="96" height="96"></canvas></button>
+        <button data-planet="earth" aria-label="Earth"><canvas width="96" height="96"></canvas></button>
+        <button data-planet="moon" aria-label="Moon"><canvas width="96" height="96"></canvas></button>
+      </div>
+    </div>
+
+    <div id="bossBar" class="boss-bar hidden">
+      <div class="boss-label" id="bossName">BOSS HP</div>
+      <div class="bar boss"><div id="bossFill" class="fill"></div></div>
+    </div>
+
+    <div class="hud-bl">
+      <div id="dpad" class="dpad">
+        <button class="dp up" id="dpUp" aria-label="Boost"><svg viewBox="0 0 24 24"><path d="M12 6l7 10H5z"/></svg></button>
+        <button class="dp left" id="dpLeft" aria-label="Spin left"><svg viewBox="0 0 24 24"><path d="M6 12l10-7v14z"/></svg></button>
+        <button class="dp right" id="dpRight" aria-label="Spin right"><svg viewBox="0 0 24 24"><path d="M18 12L8 5v14z"/></svg></button>
+        <button class="dp down" id="dpDown" aria-label="Slam"><svg viewBox="0 0 24 24"><path d="M12 18l7-10H5z"/></svg></button>
+        <span class="dp-hub"></span>
+      </div>
+      <div class="gauge">
+        <svg id="gauge" viewBox="0 0 200 118" aria-hidden="true"></svg>
+        <div class="gauge-label">ROLL SPEED</div>
+      </div>
+    </div>
+
+    <div class="hud-br">
+      <button id="btnBoost" class="act-btn" aria-label="Boost or slam">
+        <span class="act-icon"><img src="assets/sprites/icon_boost.png" alt="" onerror="this.replaceWith(document.createTextNode('🚀'))"></span>
+        <span class="cooldown" id="boostCd"></span>
+        <span class="act-label">BOOST/SLAM</span>
+      </button>
+      <button id="btnSuper" class="act-btn" aria-label="Shield and super crush">
+        <span class="act-icon"><img src="assets/sprites/icon_shield.png" alt="" onerror="this.replaceWith(document.createTextNode('🛡'))"></span>
+        <span class="cooldown" id="superCd"></span>
+        <span class="act-label">SHIELD/CRUSH</span>
+      </button>
+    </div>
+
+    <div id="keyHint" class="key-hint">← → / A D spin · ↑ boost · ↓ slam · SPACE super · 1 2 3 planet · P pause</div>
+  </div>
+
+  <!-- ===================== SCREENS ===================== -->
+  <div id="loading" class="screen show">
+    <div class="loading-box">
+      <div class="title-text">COSMIC CRUSHER</div>
+      <div class="bar load"><div id="loadFill" class="fill"></div></div>
+      <div class="hint">Loading suits &amp; aliens…</div>
+    </div>
+  </div>
+
+  <div id="menu" class="screen">
+    <div class="menu-col">
+      <img class="logo" src="assets/sprites/logo.png" alt="Cosmic Crusher" onerror="this.outerHTML='<h1 class=&quot;title-text big&quot;>COSMIC<br>CRUSHER</h1>'">
+      <div class="menu-spacer"></div>
+      <div class="menu-buttons">
+        <button class="btn btn-orange btn-big" data-action="start">START GAME</button>
+        <button class="btn btn-blue" data-go="levels">LEVELS</button>
+        <button class="btn btn-green" data-go="weapons">WEAPONS UPGRADES</button>
+        <button class="btn btn-blue" data-go="leaderboard">LEADERBOARD</button>
+        <button class="btn btn-blue" data-go="settings">SETTINGS</button>
+      </div>
+      <div class="menu-foot">Sector 1 preview build · progress saves on this device</div>
+    </div>
+  </div>
+
+  <div id="levels" class="screen">
+    <div class="panel wide">
+      <div class="plate"><span>LEVELS</span></div>
+      <div id="levelList" class="level-list"></div>
+    </div>
+    <button class="btn btn-red btn-back" data-back>BACK</button>
+  </div>
+
+  <div id="settings" class="screen">
+    <div class="panel">
+      <div class="plate"><span>SETTINGS</span></div>
+      <div class="group">
+        <label class="row slider-row">
+          <span>MUSIC</span><span class="pct" id="musicPct">70%</span>
+          <input type="range" id="setMusic" min="0" max="100" step="5">
+        </label>
+        <label class="row slider-row">
+          <span>SFX</span><span class="pct" id="sfxPct">90%</span>
+          <input type="range" id="setSfx" min="0" max="100" step="5">
+        </label>
+      </div>
+      <div class="group">
+        <div class="row"><span>VIBRATION</span><button class="toggle" id="setVibration" role="switch"></button></div>
+        <div class="row"><span>SCREEN SHAKE</span><button class="toggle" id="setShake" role="switch"></button></div>
+      </div>
+      <div class="group">
+        <div class="group-title">CONTROL STYLES</div>
+        <div class="control-styles">
+          <button class="style-btn" data-controls="tilt">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="16" y="8" width="16" height="30" rx="3" transform="rotate(-15 24 23)" fill="none" stroke-width="3"/><path d="M8 18c-2 5-1 11 3 15M40 30c2-5 1-11-3-15" fill="none" stroke-width="3" stroke-linecap="round"/></svg>
+            <span>TILT/GYRO</span>
+          </button>
+          <button class="style-btn" data-controls="dpad">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 6h10v13h13v10H29v13H19V29H6V19h13z" fill="none" stroke-width="3" stroke-linejoin="round"/></svg>
+            <span>VIRTUAL D-PAD</span>
+          </button>
+        </div>
+        <div class="hint" id="tiltNote"></div>
+      </div>
+      <div class="group credits">
+        <div class="group-title">CREDITS</div>
+        <p>Game design &amp; art: the Cosmic Crusher team.<br>Code: HTML5 canvas, no plugins. Sound: synthesized live.</p>
+      </div>
+    </div>
+    <button class="btn btn-red btn-back" data-back>BACK</button>
+  </div>
+
+  <div id="leaderboard" class="screen">
+    <div class="panel">
+      <div class="tabs"><span class="tab active">THIS DEVICE</span><span class="tab disabled" title="Online scores are coming later">GLOBAL · SOON</span></div>
+      <div class="lb-title">
+        <span>TOP COSMIC<br>CRUSHERS</span>
+        <img src="assets/sprites/icon_trophy.png" alt="" onerror="this.remove()">
+      </div>
+      <ol id="lbList" class="lb-list"></ol>
+      <div class="lb-rank"><div>YOUR BEST:</div><div id="lbRank" class="rank">—</div></div>
+    </div>
+    <button class="btn btn-red btn-back" data-back>BACK</button>
+  </div>
+
+  <div id="weapons" class="screen">
+    <div class="panel wide">
+      <div class="plate green"><span>WEAPONS</span></div>
+      <p class="hint center">Coming in the next update: equip one weapon and it fires on its own while you roll.</p>
+      <div id="weaponList" class="weapon-list"></div>
+    </div>
+    <button class="btn btn-red btn-back" data-back>BACK</button>
+  </div>
+
+  <div id="howto" class="screen">
+    <div class="panel">
+      <div class="plate"><span>HOW TO PLAY</span></div>
+      <ul class="howto-list">
+        <li><b>Spin the planet</b> so aliens roll under your astronaut. Fast enough = <b class="y">SPLAT!</b></li>
+        <li>Too slow and they hurt you. Watch the <b>ROLL SPEED</b> gauge: the white notch is crushing speed. Stay out of the red too long and you stumble.</li>
+        <li><b>BOOST/SLAM</b> jumps; landing sends a shockwave that crushes anything nearby. Press again in the air to slam down fast. Dodge the boss's goo by jumping!</li>
+        <li>Crushes fill the <b>SUPER BAR</b>. Then hit <b>SHIELD/CRUSH</b>: shield up and everything you touch is crushed.</li>
+        <li><b>Object Selector</b> swaps planets: Mars is heavy, Earth balanced, Moon fast and slippery.</li>
+      </ul>
+      <div class="howto-keys" id="howtoKeys">
+        <span><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> / drag: spin</span>
+        <span><kbd>↑</kbd> boost · <kbd>↓</kbd> slam · <kbd>Space</kbd> super</span>
+        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> planets · <kbd>P</kbd> pause</span>
+      </div>
+    </div>
+    <button class="btn btn-orange btn-back" id="howtoGo">LET'S CRUSH!</button>
+  </div>
+
+  <div id="pause" class="screen dim">
+    <div class="panel narrow">
+      <div class="plate"><span>PAUSED</span></div>
+      <div class="menu-buttons">
+        <button class="btn btn-orange" data-action="resume">RESUME</button>
+        <button class="btn btn-blue" data-action="restart">RESTART LEVEL</button>
+        <button class="btn btn-blue" data-action="howto">HOW TO PLAY</button>
+        <button class="btn btn-blue" data-go="settings">SETTINGS</button>
+        <button class="btn btn-red" data-action="quit">QUIT TO MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="results" class="screen dim">
+    <div class="panel narrow">
+      <div class="plate" id="resPlate"><span id="resTitle">LEVEL CLEAR!</span></div>
+      <img id="resSplat" class="res-splat hidden" src="assets/sprites/astro_splat.png" alt="" onerror="this.remove()">
+      <div class="stars" id="resStars"><span>★</span><span>★</span><span>★</span></div>
+      <div class="res-stats">
+        <div><span>SCORE</span><b id="resScore">0</b></div>
+        <div><span>CRUSHES</span><b id="resCrushes">0</b></div>
+        <div><span>BEST COMBO</span><b id="resCombo">x0</b></div>
+      </div>
+      <div class="new-best hidden" id="resBest">NEW BEST!</div>
+      <form id="nameForm" class="name-form hidden" autocomplete="off">
+        <div class="hint">Top-10 score! Enter your name:</div>
+        <div class="name-row">
+          <input id="nameInput" maxlength="12" placeholder="CADET" aria-label="Your name">
+          <button class="btn btn-green small" type="submit">SAVE</button>
+        </div>
+      </form>
+      <div class="menu-buttons">
+        <button class="btn btn-orange" data-action="next" id="resNext">NEXT LEVEL</button>
+        <button class="btn btn-blue" data-action="retry">RETRY</button>
+        <button class="btn btn-red" data-action="quit">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

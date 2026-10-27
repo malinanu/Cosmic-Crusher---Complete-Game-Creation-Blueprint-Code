@@ -1,0 +1,397 @@
+// Menus and screens: main menu, level select, settings, leaderboard,
+// weapons preview, how-to, pause and results.
+(function (CC) {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var game;
+  var current = null;
+  var backStack = [];
+  var lastResult = null;
+  var touch = false;
+
+  var WEAPONS = [
+    { id: 'gravity_launcher', name: 'Gravity Launcher', text: 'Pulls falling aliens straight down into your path.' },
+    { id: 'meteor_hammer', name: 'Meteor Hammer', text: 'Supercharges SLAM with a huge fiery shockwave.' },
+    { id: 'plasma_blaster', name: 'Plasma Blaster', text: 'Auto-zaps the nearest falling alien.' },
+    { id: 'sonic_blunderbuss', name: 'Sonic Wave Blunderbuss', text: 'A sound blast that knocks aliens back and stuns them.' },
+    { id: 'orbit_discs', name: 'Orbit Discs', text: 'Two saw discs circle the planet, shredding what they touch.' },
+    { id: 'quantum_grapple', name: 'Quantum Grapple', text: 'Yanks hovering enemies down to be crushed.' },
+    { id: 'super_size_booster', name: 'Super-Size Booster', text: 'Grow giant for a few seconds: a much wider crush zone.' },
+    { id: 'alien_harpoon', name: 'Alien Harpoon', text: 'Pierces a line of aliens; heavy damage to bosses.' }
+  ];
+
+  function settings() { return CC.storage.data.settings; }
+
+  // ---- Screen routing -------------------------------------------------------------
+
+  function show(id, opts) {
+    opts = opts || {};
+    if (current && current !== id && !opts.noStack) backStack.push(current);
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('show', s.id === id); });
+    current = id;
+    if (id === 'levels') renderLevels();
+    if (id === 'leaderboard') renderLeaderboard();
+    if (id === 'settings') renderSettings();
+  }
+
+  function hideScreens() {
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('show'); });
+    current = null;
+    backStack = [];
+  }
+
+  function back() {
+    var prev = backStack.pop() || 'menu';
+    show(prev, { noStack: true });
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  // ---- Flow -------------------------------------------------------------------------
+
+  function goMenu() {
+    game.startAttract();
+    CC.hud.show(false);
+    CC.input.setEnabled(false);
+    backStack = [];
+    current = null;
+    show('menu', { noStack: true });
+    CC.audio.startMusic('menu');
+  }
+
+  function startLevel(n) {
+    var d = CC.storage.data;
+    if (!d.seenHowTo) {
+      d.seenHowTo = true;
+      CC.storage.save();
+      $('howtoGo').onclick = function () { CC.audio.play('ui'); startLevel(n); };
+      backStack = [];
+      current = null;
+      show('howto', { noStack: true });
+      return;
+    }
+    hideScreens();
+    game.setPlanet(d.planet || 'moon');
+    game.startLevel(n);
+    CC.hud.show(true);
+    CC.input.setEnabled(true);
+    if (settings().controls === 'tilt') CC.input.enableTilt();
+  }
+
+  function pauseGame() {
+    if (game.mode !== 'level' || game.state === 'done' || current === 'results') return;
+    if (game.state === 'paused') { resumeGame(); return; }
+    game.pause();
+    if (game.state !== 'paused') return;
+    CC.input.setEnabled(false);
+    backStack = [];
+    current = null;
+    show('pause', { noStack: true });
+  }
+
+  function resumeGame() {
+    hideScreens();
+    game.resume();
+    CC.input.setEnabled(true);
+  }
+
+  function onResult(result) {
+    lastResult = result;
+    CC.input.setEnabled(false);
+    var rec = CC.storage.recordLevel(result);
+    var last = result.won && result.level >= CC.levels.maxPlayable;
+    $('resTitle').textContent = !result.won ? 'CRUSHED!' : last ? 'SECTOR 1 CLEARED!' : 'LEVEL ' + result.level + ' CLEAR!';
+    $('resPlate').classList.toggle('red', !result.won);
+    $('resSplat').classList.toggle('hidden', result.won);
+    var stars = $('resStars');
+    stars.classList.toggle('hidden', !result.won);
+    stars.querySelectorAll('span').forEach(function (s, i) { s.classList.toggle('on', i < result.stars); });
+    $('resScore').textContent = result.score.toLocaleString('en-US');
+    $('resCrushes').textContent = result.crushes;
+    $('resCombo').textContent = 'x' + result.bestCombo;
+    $('resBest').classList.toggle('hidden', !rec.newBest || result.score === 0);
+    var next = $('resNext');
+    next.classList.toggle('hidden', !result.won || last);
+    var form = $('nameForm');
+    form.classList.toggle('hidden', !CC.storage.qualifies(result.score));
+    $('nameInput').value = CC.storage.data.lastName || '';
+    if (last) toast('More sectors are on the way. Thanks for playing!');
+    backStack = [];
+    current = null;
+    show('results', { noStack: true });
+  }
+
+  // ---- Screens ------------------------------------------------------------------------
+
+  function renderLevels() {
+    var d = CC.storage.data;
+    var list = $('levelList');
+    list.innerHTML = '';
+    CC.levels.sectors.forEach(function (sec) {
+      var wrap = document.createElement('div');
+      wrap.className = 'sector' + (sec.available ? '' : ' locked');
+      var head = document.createElement('div');
+      head.className = 'sector-head';
+      head.innerHTML = '<span>SECTOR ' + sec.id + ' · ' + sec.name.toUpperCase() + '</span><span class="range">' + sec.first + '–' + sec.last + '</span>';
+      wrap.appendChild(head);
+      if (!sec.available) {
+        var soon = document.createElement('div');
+        soon.className = 'soon';
+        soon.textContent = 'COMING SOON';
+        wrap.appendChild(soon);
+      } else {
+        var grid = document.createElement('div');
+        grid.className = 'level-grid';
+        for (var n = sec.first; n <= sec.last; n++) {
+          var b = document.createElement('button');
+          var info = d.levels[n] || { stars: 0, best: 0 };
+          var open = n <= d.unlocked;
+          var boss = n % 10 === 0;
+          b.className = 'level-tile' + (open ? '' : ' locked') + (boss ? ' boss' : '');
+          b.disabled = !open;
+          b.innerHTML = '<span class="num">' + (open ? n : '🔒') + '</span>' +
+            '<span class="st">' + [0, 1, 2].map(function (i) { return '<i class="' + (i < info.stars ? 'on' : '') + '">★</i>'; }).join('') + '</span>' +
+            (boss ? '<span class="tag">BOSS</span>' : '');
+          b.setAttribute('aria-label', 'Level ' + n + (open ? '' : ' (locked)'));
+          (function (lvl) { b.onclick = function () { CC.audio.play('ui'); startLevel(lvl); }; })(n);
+          grid.appendChild(b);
+        }
+        wrap.appendChild(grid);
+      }
+      list.appendChild(wrap);
+    });
+  }
+
+  function renderLeaderboard() {
+    var d = CC.storage.data;
+    var ol = $('lbList');
+    ol.innerHTML = '';
+    if (!d.leaderboard.length) {
+      var li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'No scores yet. Go crush some aliens!';
+      ol.appendChild(li);
+    }
+    var best = null;
+    d.leaderboard.forEach(function (e, i) {
+      var li = document.createElement('li');
+      var medal = ['gold', 'silver', 'bronze'][i] || '';
+      var mine = d.lastName && e.name === d.lastName;
+      if (mine && best === null) best = i;
+      li.className = medal + (mine ? ' me' : '');
+      li.innerHTML = '<span class="rank-cell">' + (i < 3 ? '🏆' : (i + 1) + '.') + '</span>' +
+        '<span class="name"></span><span class="pts">' + e.score.toLocaleString('en-US') + ' pts</span>';
+      li.querySelector('.name').textContent = e.name + ' · L' + e.level;
+      ol.appendChild(li);
+    });
+    $('lbRank').textContent = best === null ? '—' : ordinal(best + 1);
+  }
+
+  function ordinal(n) {
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  function renderWeapons() {
+    var list = $('weaponList');
+    list.innerHTML = '';
+    WEAPONS.forEach(function (w) {
+      var card = document.createElement('div');
+      card.className = 'weapon-card';
+      card.innerHTML = '<div class="w-img"><img alt="" src="assets/sprites/weapon_' + w.id + '.png"></div>' +
+        '<div class="w-name"></div><div class="w-text"></div><div class="w-lock">LOCKED</div>';
+      card.querySelector('.w-name').textContent = w.name;
+      card.querySelector('.w-text').textContent = w.text;
+      card.querySelector('img').onerror = function () { this.parentNode.classList.add('missing'); this.remove(); };
+      list.appendChild(card);
+    });
+  }
+
+  function renderSettings() {
+    var s = settings();
+    $('setMusic').value = Math.round(s.music * 100);
+    $('setSfx').value = Math.round(s.sfx * 100);
+    $('musicPct').textContent = Math.round(s.music * 100) + '%';
+    $('sfxPct').textContent = Math.round(s.sfx * 100) + '%';
+    setToggle($('setVibration'), s.vibration);
+    setToggle($('setShake'), s.shake);
+    document.querySelectorAll('.style-btn').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-controls') === s.controls);
+    });
+    paintSlider($('setMusic'));
+    paintSlider($('setSfx'));
+  }
+
+  function setToggle(btn, on) {
+    btn.classList.toggle('on', !!on);
+    btn.setAttribute('aria-checked', on ? 'true' : 'false');
+    btn.innerHTML = '<span class="t-on">ON</span><span class="t-off">OFF</span><span class="knob"></span>';
+  }
+
+  function paintSlider(input) {
+    input.style.setProperty('--v', input.value + '%');
+  }
+
+  function applySettings() {
+    var s = settings();
+    CC.audio.setVolumes(s.music, s.sfx);
+    CC.audio.setMuted(s.muted);
+    game.settings.shake = s.shake;
+    CC.hud.setControls(s.controls, touch);
+    document.getElementById('btnSound').classList.toggle('muted', !!s.muted);
+  }
+
+  function bindSettings() {
+    ['setMusic', 'setSfx'].forEach(function (id) {
+      $(id).addEventListener('input', function () {
+        var v = this.value / 100;
+        if (id === 'setMusic') { settings().music = v; $('musicPct').textContent = this.value + '%'; }
+        else { settings().sfx = v; $('sfxPct').textContent = this.value + '%'; }
+        paintSlider(this);
+        applySettings();
+      });
+      $(id).addEventListener('change', function () { CC.storage.save(); if (id === 'setSfx') CC.audio.play('splat'); });
+    });
+    $('setVibration').onclick = function () {
+      settings().vibration = !settings().vibration;
+      CC.storage.save(); renderSettings();
+      if (settings().vibration) CC.input.vibrate(40);
+    };
+    $('setShake').onclick = function () {
+      settings().shake = !settings().shake;
+      CC.storage.save(); renderSettings(); applySettings();
+    };
+    document.querySelectorAll('.style-btn').forEach(function (b) {
+      b.onclick = function () {
+        var mode = b.getAttribute('data-controls');
+        $('tiltNote').textContent = '';
+        if (mode === 'tilt') {
+          CC.input.enableTilt().then(function (ok) {
+            if (!ok) {
+              $('tiltNote').textContent = 'Tilt isn\'t available here, so the D-pad stays on.';
+              settings().controls = 'dpad';
+            } else {
+              settings().controls = 'tilt';
+              $('tiltNote').textContent = 'Tilt your phone left and right to spin.';
+            }
+            CC.storage.save(); renderSettings(); applySettings();
+          });
+        } else {
+          CC.input.disableTilt();
+          settings().controls = 'dpad';
+          CC.storage.save(); renderSettings(); applySettings();
+        }
+      };
+    });
+  }
+
+  // ---- Wiring ---------------------------------------------------------------------------
+
+  function bindGameEvents() {
+    var A = CC.audio;
+    function buzz(ms) { if (settings().vibration && game.mode === 'level') CC.input.vibrate(ms); }
+    game.on('crush', function (e) { A.play('splat', e); buzz(12); });
+    game.on('hurt', function () { A.play('hurt'); buzz([40, 30, 40]); });
+    game.on('boost', function () { A.play('boost'); });
+    game.on('slam', function () { A.play('slam'); buzz(30); });
+    game.on('super', function () { A.play('super'); buzz(60); });
+    game.on('superReady', function () { A.play('superReady'); });
+    game.on('superEnd', function () { A.play('superEnd'); });
+    game.on('land', function () { if (game.mode === 'level') A.play('land'); });
+    game.on('goo', function () { A.play('goo'); });
+    game.on('bossIntro', function () { A.play('bossIntro'); A.startMusic('boss'); });
+    game.on('bossLand', function () { A.play('bossLand'); buzz(80); });
+    game.on('bossHit', function () { A.play('bossHit'); buzz(50); });
+    game.on('bossDown', function () { A.play('bossDown'); buzz([60, 40, 120]); });
+    game.on('wave', function () { A.play('wave'); });
+    game.on('boing', function () { A.play('boing'); });
+    game.on('stumble', function () { A.play('stumble'); buzz(60); });
+    game.on('planet', function (e) {
+      A.play('planet');
+      if (game.mode === 'level') { CC.storage.data.planet = e.key; CC.storage.save(); }
+    });
+    game.on('levelStart', function () { A.startMusic('game'); });
+    game.on('levelClear', function () { A.play('win'); });
+    game.on('dead', function () { A.play('lose'); buzz(200); });
+    game.on('win', onResult);
+    game.on('lose', onResult);
+  }
+
+  function init(g, opts) {
+    game = g;
+    touch = !!opts.touch;
+
+    document.querySelectorAll('[data-go]').forEach(function (b) {
+      b.addEventListener('click', function () { CC.audio.play('ui'); show(b.getAttribute('data-go')); });
+    });
+    document.querySelectorAll('[data-back]').forEach(function (b) {
+      b.addEventListener('click', function () { CC.audio.play('ui'); back(); });
+    });
+    document.querySelectorAll('[data-action]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        CC.audio.play('ui');
+        var a = b.getAttribute('data-action');
+        var d = CC.storage.data;
+        if (a === 'start') startLevel(Math.min(d.unlocked, CC.levels.maxPlayable));
+        else if (a === 'resume') resumeGame();
+        else if (a === 'restart') startLevel(game.level.level);
+        else if (a === 'retry') startLevel(lastResult ? lastResult.level : 1);
+        else if (a === 'next') startLevel(Math.min(CC.levels.maxPlayable, (lastResult ? lastResult.level : 0) + 1));
+        else if (a === 'quit') goMenu();
+        else if (a === 'howto') {
+          $('howtoGo').onclick = function () { CC.audio.play('ui'); back(); };
+          show('howto');
+        }
+      });
+    });
+
+    $('nameForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!lastResult) return;
+      var rank = CC.storage.addScore($('nameInput').value, lastResult.score, lastResult.level);
+      this.classList.add('hidden');
+      toast('Saved! You are #' + (rank + 1) + ' on this device.');
+    });
+
+    $('btnPause').addEventListener('click', function () { CC.audio.play('ui'); pauseGame(); });
+    $('btnSound').addEventListener('click', function () {
+      settings().muted = !settings().muted;
+      CC.storage.save();
+      applySettings();
+    });
+    document.querySelectorAll('#selector button').forEach(function (b) {
+      b.addEventListener('click', function () { game.setPlanet(b.getAttribute('data-planet')); });
+    });
+
+    CC.input.on('pause', pauseGame);
+    CC.input.on('planet', function (key) { if (game.mode === 'level' && game.state !== 'paused') game.setPlanet(key); });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && game.mode === 'level' && game.state !== 'paused' && game.state !== 'done') pauseGame();
+    });
+
+    if (!touch) {
+      $('howtoKeys').classList.add('show');
+    }
+
+    bindSettings();
+    bindGameEvents();
+    renderWeapons();
+    applySettings();
+  }
+
+  CC.ui = {
+    init: init,
+    goMenu: goMenu,
+    startLevel: startLevel,
+    show: show,
+    toast: toast
+  };
+})(window.CC = window.CC || {});
