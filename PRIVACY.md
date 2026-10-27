@@ -1,8 +1,8 @@
-# Cosmic Crusher privacy policy
+# AstroSpin privacy policy
 
 _Last updated: 27 October 2026_
 
-Cosmic Crusher does not collect, store or share any personal information.
+AstroSpin does not collect, store or share any personal information.
 
 - **No accounts and no names.** The game never asks for a name, email, age or any other personal detail. The "top runs" list shows only scores and level numbers.
 - **No network use.** The game makes no network requests. It contains no ads, analytics, tracking or third-party services. Everything it needs ships inside the app.

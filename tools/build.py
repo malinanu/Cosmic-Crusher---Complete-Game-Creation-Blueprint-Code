@@ -3,6 +3,7 @@
 
     python3 tools/build.py youtube   # dist/youtube/ + dist/cosmic-crusher-youtube.zip
     python3 tools/build.py mobile    # dist/mobile/ (Capacitor's web folder)
+    python3 tools/build.py web       # dist/web/ (Static web hosting / CloudPanel)
     python3 tools/build.py all
 
 Each bundle is the game with:
@@ -77,7 +78,7 @@ def build(target):
     html = read("index.html")
     order = script_order(html)
     header = (
-        "// Cosmic Crusher %s build %s. Source: the js/ folder of the repository.\n"
+        "// AstroSpin %s build %s. Source: the js/ folder of the repository.\n"
         "window.CC = window.CC || {};\n"
         "CC.BUILD = %s;\n"
         "CC.SPRITES = %s;\n"
@@ -183,14 +184,14 @@ def report(out, target, problems, warnings):
     for p in problems:
         print("  FAIL: " + p)
     if not problems:
-        print("  YouTube Playables checks passed")
+        print("  YouTube Playables checks passed" if target == "youtube" else ("  %s checks passed" % target.capitalize()))
 
 
 def main(args):
-    targets = ["youtube", "mobile"] if not args or args == ["all"] else args
+    targets = ["youtube", "mobile", "web"] if args == ["all"] else (["youtube", "mobile"] if not args else args)
     for t in targets:
-        if t not in ("youtube", "mobile"):
-            sys.exit("unknown target %r (use youtube, mobile or all)" % t)
+        if t not in ("youtube", "mobile", "web"):
+            sys.exit("unknown target %r (use youtube, mobile, web or all)" % t)
         build(t)
 
 

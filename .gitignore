@@ -3,3 +3,7 @@ node_modules/
 .DS_Store
 dist/
 __pycache__/
+.keys/
+*.key
+*.pem
+id_*

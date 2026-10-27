@@ -376,7 +376,7 @@
         if (fb === 'logo') {
           var h = document.createElement('h1');
           h.className = 'title-text big';
-          h.innerHTML = 'COSMIC<br>CRUSHER';
+          h.innerHTML = 'ASTRO<br>SPIN';
           img.replaceWith(h);
         } else if (fb) {
           img.replaceWith(document.createTextNode(fb));

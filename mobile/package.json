@@ -2,7 +2,7 @@
   "name": "cosmic-crusher-mobile",
   "version": "0.2.0",
   "private": true,
-  "description": "Android and iOS apps for Cosmic Crusher (Capacitor wrapper around the web build).",
+  "description": "Android and iOS apps for AstroSpin (Capacitor wrapper around the web build).",
   "scripts": {
     "build:web": "python3 ../tools/build.py mobile",
     "sync": "npm run build:web && cap sync",

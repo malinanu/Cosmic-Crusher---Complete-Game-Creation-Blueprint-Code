@@ -1,4 +1,4 @@
-# Cosmic Crusher
+# AstroSpin
 
 Spin the planet, roll the aliens under your astronaut, and **SPLAT!** them before they reach you.
 A 2D arcade game for **YouTube Playables**, **Android**, **iPhone** and the web, built from the [game blueprint](docs/BLUEPRINT.md) and the art sheets in [`art/`](art/). Plain HTML5 Canvas + JavaScript: no engine, no network, about 0.5 MB.
