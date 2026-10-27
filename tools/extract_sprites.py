@@ -17,6 +17,12 @@ Options: dark = luminance below which a pixel counts as background (default
 drop specks smaller than this fraction of the largest piece, seal = close
 outline gaps this many px wide before filling.
 
+Each sprite is cut at the sheet's own resolution, upscaled 4x with the AI
+upscaler in tools/upscale.py (so it stays sharp on 3x phone screens), then
+resized to its `size` (longest side in px). Without PyTorch installed the
+upscale step is skipped and the native-size cut-outs are saved instead.
+    python3 tools/extract_sprites.py --no-upscale   # skip it on purpose
+
 A contact sheet of every sprite on a checkerboard is written to
 tools/out/contact_sheet.png so the cut-outs can be checked by eye.
 
@@ -44,36 +50,37 @@ SOURCES = {
     "boss_hud": "mock_final_boss.jpg",
 }
 
-# name, source, box, options. max = longest side of the saved PNG.
+# name, source, box, options. size = longest side of the saved PNG: about
+# twice the largest size the sprite is drawn at on a 2x-3x screen.
 SPRITES = [
     # Classic White suit
-    dict(name="astro_idle", src="suits", box=(305, 190, 615, 670), max=320,
+    dict(name="astro_idle", src="suits", box=(305, 190, 615, 670), size=640,
          erase=[(565, 190, 615, 262)]),
-    dict(name="astro_run1", src="suits", box=(105, 1615, 335, 1902), max=256),
-    dict(name="astro_run2", src="suits", box=(340, 1615, 568, 1902), max=256),
-    dict(name="astro_run3", src="suits", box=(566, 1620, 800, 1902), max=256),
-    dict(name="astro_leap", src="suits", box=(815, 1598, 1045, 1910), max=256),
-    dict(name="astro_splat", src="suits", box=(1045, 1620, 1445, 1890), max=320),
-    dict(name="fx_shield", src="suits", box=(1090, 295, 1372, 612), max=256, dark=45),
-    dict(name="icon_suit_white", src="suits", box=(84, 211, 247, 386), mode="rect", max=128),
+    dict(name="astro_run1", src="suits", box=(105, 1615, 335, 1902), size=512),
+    dict(name="astro_run2", src="suits", box=(340, 1615, 568, 1902), size=512),
+    dict(name="astro_run3", src="suits", box=(566, 1620, 800, 1902), size=512),
+    dict(name="astro_leap", src="suits", box=(815, 1598, 1045, 1910), size=512),
+    dict(name="astro_splat", src="suits", box=(1045, 1620, 1445, 1890), size=640),
+    dict(name="fx_shield", src="suits", box=(1090, 295, 1372, 612), size=512, dark=45),
+    dict(name="icon_suit_white", src="suits", box=(84, 211, 247, 386), mode="rect", size=256),
     # Later suits (Phase 2) are cut now so the art is ready
-    dict(name="suit_magma_idle", src="suits", box=(278, 682, 612, 1118), max=320,
+    dict(name="suit_magma_idle", src="suits", box=(278, 682, 612, 1118), size=640,
          erase=[(565, 682, 612, 748)]),
-    dict(name="suit_void_idle", src="suits", box=(287, 1132, 568, 1543), max=320, dark=34, seal=2),
+    dict(name="suit_void_idle", src="suits", box=(287, 1132, 568, 1543), size=640, dark=34, seal=2),
     # Aliens
-    dict(name="alien_bouncer", src="aliens", box=(392, 292, 708, 588), max=200),
-    dict(name="alien_roller", src="aliens", box=(434, 595, 722, 875), max=200),
-    dict(name="alien_crawler", src="aliens", box=(78, 900, 740, 1142), max=320,
+    dict(name="alien_bouncer", src="aliens", box=(392, 292, 708, 588), size=400),
+    dict(name="alien_roller", src="aliens", box=(434, 595, 722, 875), size=400),
+    dict(name="alien_crawler", src="aliens", box=(78, 900, 740, 1142), size=640,
          erase=[(78, 900, 340, 932)]),
-    dict(name="alien_splicer", src="aliens", box=(372, 1175, 766, 1438), max=240),
-    dict(name="boss_blob", src="aliens", box=(158, 1440, 685, 1858), max=420),
+    dict(name="alien_splicer", src="aliens", box=(372, 1175, 766, 1438), size=480),
+    dict(name="boss_blob", src="aliens", box=(158, 1440, 685, 1858), size=800),
     # UI
-    dict(name="logo", src="menus", box=(36, 86, 460, 306), max=640, dark=40),
-    dict(name="icon_boost", src="boss_hud", box=(560, 1784, 670, 1906), max=128),
-    dict(name="icon_shield", src="boss_hud", box=(744, 1780, 866, 1912), max=128),
-    dict(name="icon_trophy", src="menus", box=(852, 1150, 968, 1268), max=128),
+    dict(name="logo", src="menus", box=(36, 86, 460, 306), size=1280, dark=40),
+    dict(name="icon_boost", src="boss_hud", box=(560, 1784, 670, 1906), size=320),
+    dict(name="icon_shield", src="boss_hud", box=(744, 1780, 866, 1912), size=320),
+    dict(name="icon_trophy", src="menus", box=(852, 1150, 968, 1268), size=256),
     # Props
-    dict(name="prop_asteroid", src="boss_hud", box=(760, 1335, 910, 1492), max=160, keep=0.3),
+    dict(name="prop_asteroid", src="boss_hud", box=(760, 1335, 910, 1492), size=320, keep=0.3),
 ]
 
 
@@ -189,12 +196,14 @@ def cut_circle(img, spec):
     return out
 
 
-def trim_and_scale(im, max_side):
+def trim_and_scale(im, max_side, upscale=None):
     bbox = im.getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
     if bbox:
         x0, y0, x1, y1 = bbox
         pad = 2
         im = im.crop((max(0, x0 - pad), max(0, y0 - pad), min(im.width, x1 + pad), min(im.height, y1 + pad)))
+    if upscale and max(im.size) < max_side:
+        im = upscale(im)
     longest = max(im.size)
     if longest > max_side:
         f = max_side / longest
@@ -225,11 +234,22 @@ def contact_sheet(paths):
     return sheet
 
 
-def main(only):
+def load_upscaler():
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import upscale
+        return upscale.upscale_rgba
+    except ImportError as e:
+        print("note: AI upscaling skipped (%s); sprites are saved at sheet resolution" % e)
+        return None
+
+
+def main(only, use_upscaler=True):
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(SHEET_OUT, exist_ok=True)
     cache = {}
     written = []
+    upscaler = load_upscaler() if use_upscaler else None
     for spec in SPRITES:
         if only and spec["name"] not in only:
             continue
@@ -248,7 +268,7 @@ def main(only):
             out = crop.convert("RGBA")
         else:
             out = cut_flood(crop, spec)
-        out = trim_and_scale(out, spec.get("max", 256))
+        out = trim_and_scale(out, spec.get("size", 256), upscaler)
         path = os.path.join(OUT, spec["name"] + ".png")
         out.save(path, optimize=True)
         written.append(path)
@@ -259,4 +279,5 @@ def main(only):
 
 
 if __name__ == "__main__":
-    main(set(sys.argv[1:]))
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    main(set(args), use_upscaler="--no-upscale" not in sys.argv)
