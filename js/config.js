@@ -11,15 +11,15 @@
     // Low accel + high friction = a spin that builds up and coasts down gently.
     planets: {
       moon: {
-        name: 'Moon', accel: 0.0011, friction: 0.985, maxSpin: 0.055, threshold: 0.019,
+        name: 'Moon', accel: 0.00066, friction: 0.985, maxSpin: 0.033, threshold: 0.0114,
         glow: '#7fd6ff', blurb: 'Light & slippery: fast top speed, slow to stop.'
       },
       earth: {
-        name: 'Earth', accel: 0.0011, friction: 0.975, maxSpin: 0.045, threshold: 0.0155,
+        name: 'Earth', accel: 0.00066, friction: 0.975, maxSpin: 0.027, threshold: 0.0093,
         glow: '#5fb8ff', blurb: 'Balanced all-rounder.'
       },
       mars: {
-        name: 'Mars', accel: 0.0012, friction: 0.965, maxSpin: 0.038, threshold: 0.012,
+        name: 'Mars', accel: 0.00072, friction: 0.965, maxSpin: 0.023, threshold: 0.0072,
         glow: '#ff9a55', blurb: 'Heavy: crushes at low speed, stops fast.'
       }
     },
