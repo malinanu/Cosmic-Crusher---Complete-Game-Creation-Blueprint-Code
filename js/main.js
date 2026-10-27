@@ -127,9 +127,13 @@
 
   function makeLoop(game) {
     var raf = 0, last = 0, acc = 0;
-    function frame(now) {
+    function frame() {
       raf = requestAnimationFrame(frame);
-      var dt = Math.min(0.1, (now - last) / 1000);
+      // Measure with performance.now(): after a resume some engines (WebKit)
+      // pass a stale frame timestamp from before the pause, which would make
+      // the step negative and stall the game until it caught up.
+      var now = performance.now();
+      var dt = Math.max(0, Math.min(0.1, (now - last) / 1000));
       last = now;
       acc += dt;
       var steps = 0;
