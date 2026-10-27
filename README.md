@@ -48,23 +48,31 @@ It also proves the iOS project compiles.
 
 ### YouTube Playables
 
-The game follows the [Playables certification requirements](https://developers.google.com/youtube/gaming/playables/certification/requirements):
-- **SDK loading:** the Playables SDK loads before any game code.
-- **Ready signals:** `firstFrameReady` is sent on the loading screen, and `gameReady` once the menu is interactive.
-- **Saves:** progress saves only through the SDK's cloud save, after `loadData`.
-- **Pause:** pausing and resuming happen only through `onPause` and `onResume`.
-- **Sound:** YouTube's mute is respected, and there is no in-game mute button.
-- **Score:** `sendScore` reports the best run.
-- **Privacy:** the game asks for no names or text input.
-- **Devices:** touch, mouse and keyboard all work at every aspect ratio.
+The game is built to meet every MUST in the [Playables certification requirements](https://developers.google.com/youtube/gaming/playables/certification/requirements):
 
-`node tools/smoke_test.js` checks all of this against a stand-in SDK under YouTube's content security policy.
+| Requirement | How the game meets it | Checked by |
+|---|---|---|
+| SDK loads before game code | the build puts the SDK `<script>` first | `build.py` |
+| `firstFrameReady` on the loading screen, then `gameReady` when interactive | sent once each, in order. Boot doesn't wait for animation frames, so a hidden 0×0 WebView still reports ready | smoke test (mock SDK, hidden 1×1 start) |
+| Cloud save only, after `loadData`; older saves handled | `js/platform.js` + `js/storage.js`; saves on level change and on pause | smoke test |
+| `sendScore` integer equal to the best score in the save | the top run is sent whenever it improves | smoke test |
+| Pause and resume only via `onPause`/`onResume`, and everything stops | the loop, input, audio and CSS animations stop; no Page Visibility API | smoke test |
+| YouTube mute respected; sound without waiting for a tap; no in-game mute | the audio context follows `isAudioEnabled`; music starts at load when allowed; iOS silent switch respected | smoke test |
+| No external calls; scripts allowed by YouTube's nonce CSP | fonts, art and sound all bundled; no inline scripts or handlers | `build.py` + smoke test under the CSP |
+| Size: under 30 MiB total, files under 30 MiB, at most 8000 files, safe names, relative paths | about 1.1 MiB total, largest file about 170 KiB | `build.py` |
+| Every aspect ratio, no orientation lock, state kept on resize | tested at 13 sizes, from 9:32 to 32:9, and across a rotation | smoke test |
+| Touch, mouse (and keyboard) for everything; Esc closes dialogs without `preventDefault` | on-screen D-pad and buttons for all actions | smoke test (mouse-only play) |
+| Sharp text and graphics at every density | sprites AI-upscaled from your sheets and drawn at or below their pixel size; canvas at full device resolution | smoke test (fails if anything is drawn more than 1.15× its size) |
+| Chrome/Edge, Firefox, YouTube Android/iOS apps | YouTube checks run on Chromium, Firefox and WebKit | CI |
+| Haptics toggle; end-of-content message; no exit button, sharing, links, ads, purchases, names or text entry | Settings has a Vibration switch; level 20 says more is coming | smoke test / review |
+
+Your listing text, genre, content notes, thumbnails and accessibility tags are ready to paste in [docs/youtube-listing.md](docs/youtube-listing.md).
 
 To publish:
 1. Your channel needs access to Playables publishing. Apply through the YouTube Playables partner programme; access currently goes through a partner manager.
-2. Upload `dist/cosmic-crusher-youtube.zip` in the Playables developer portal.
-3. Run YouTube's [test suite](https://developers.google.com/youtube/gaming/playables/test_suite) on the uploaded build.
-4. Add listing images. Use `store/screenshot-*.jpg` for thumbnails; YouTube doesn't allow logos in them.
+2. Upload `dist/cosmic-crusher-youtube.zip` (or the `youtube-playables-bundle` artifact from CI) in the Playables developer portal.
+3. Run YouTube's SDK test suite there on the uploaded build. Then play-test it in the YouTube app on Android and iOS, and on desktop.
+4. Fill in the listing from `docs/youtube-listing.md`.
 
 ### Android (Google Play) and iPhone (App Store)
 
@@ -167,11 +175,14 @@ tools/                build, sprite extractor, art generators, tests
 
 ## Your art
 
-`tools/extract_sprites.py` cuts each sprite out of the sheets in `art/` and saves it as a transparent PNG in `assets/sprites/`. It does this by flood-filling the dark sheet background from the edge of each crop box. To see the result, open the contact sheet it writes to `tools/out/contact_sheet.png`.
+`tools/extract_sprites.py` cuts each sprite out of the sheets in `art/` and saves it as a transparent PNG in `assets/sprites/`. It does this by flood-filling the dark sheet background from the edge of each crop box.
+
+The sheets are small, so each cut-out is then upscaled 4× with the open-source Real-ESRGAN anime model (`tools/upscale.py`). That keeps the art sharp on 3× phone screens. The upscaler needs PyTorch (`pip install torch --index-url https://download.pytorch.org/whl/cpu`). It downloads its 18 MB weights on first use. To see the result, open the contact sheet it writes to `tools/out/contact_sheet.png`.
 
 ```bash
-python3 tools/extract_sprites.py            # all sprites
-python3 tools/extract_sprites.py logo       # just one
+python3 tools/extract_sprites.py               # all sprites (about 4 minutes on a laptop CPU)
+python3 tools/extract_sprites.py logo          # just one
+python3 tools/extract_sprites.py --no-upscale  # skip the AI step (softer on high-res screens)
 ```
 
 **Adding or replacing art.** Drop a PNG with the right name into `assets/sprites/` and the game picks it up; no code changes are needed. Any name that has no file is drawn in code instead.
@@ -210,13 +221,15 @@ Some URL options help when testing:
 
 ```bash
 node tools/check_levels.js     # level table matches the blueprint formulas
-node tools/smoke_test.js       # full playthrough + YouTube Playables checks + 8 aspect ratios
+node tools/smoke_test.js                               # everything, in Chromium
+node tools/smoke_test.js --browser=webkit --only=youtube  # YouTube checks in WebKit (or firefox)
 ```
 
 The smoke test needs Playwright (`npm install --no-save playwright && npx playwright install chromium`). It covers three runs:
 - **Development copy:** menus, a level, the super, pause, win and lose, and the boss.
 - **YouTube build:** run under YouTube's content security policy with a recording stand-in for the SDK (`tools/yt_sdk_mock.js`). It checks the ready signals, cloud save, score, pause and resume, audio, no network calls, and mouse-only play.
-- **Aspect ratios:** eight sizes from 360×640 to 1050×450.
+- **Hidden start:** a hidden 1×1 start, plus a run where YouTube's audio setting is off.
+- **Aspect ratios:** 13 sizes from 9:32 to 32:9, including a sharpness check.
 
 It writes screenshots to `tools/out/`.
 
