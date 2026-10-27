@@ -1,5 +1,6 @@
 /* Cosmic Crusher UI — neon glass panels and chunky arcade buttons. */
 :root {
+  color-scheme: dark;
   --bg: #070818;
   --panel: rgba(14, 26, 64, 0.82);
   --panel-edge: #3fa9ff;
