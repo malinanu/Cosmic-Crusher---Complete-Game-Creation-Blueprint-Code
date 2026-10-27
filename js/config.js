@@ -8,20 +8,24 @@
 
     // Spin physics: ω = (ω + α) · μ each frame (blueprint §2), capped at maxSpin.
     // threshold = slowest spin that still crushes a landed alien.
+    // Low accel + high friction = a spin that builds up and coasts down gently.
     planets: {
       moon: {
-        name: 'Moon', accel: 0.0036, friction: 0.978, maxSpin: 0.11, threshold: 0.040,
+        name: 'Moon', accel: 0.0011, friction: 0.985, maxSpin: 0.055, threshold: 0.019,
         glow: '#7fd6ff', blurb: 'Light & slippery: fast top speed, slow to stop.'
       },
       earth: {
-        name: 'Earth', accel: 0.0030, friction: 0.960, maxSpin: 0.09, threshold: 0.034,
+        name: 'Earth', accel: 0.0011, friction: 0.975, maxSpin: 0.045, threshold: 0.0155,
         glow: '#5fb8ff', blurb: 'Balanced all-rounder.'
       },
       mars: {
-        name: 'Mars', accel: 0.0034, friction: 0.945, maxSpin: 0.075, threshold: 0.027,
+        name: 'Mars', accel: 0.0012, friction: 0.965, maxSpin: 0.038, threshold: 0.012,
         glow: '#ff9a55', blurb: 'Heavy: crushes at low speed, stops fast.'
       }
     },
+    // Share of the gap between the current push and the input closed each
+    // frame, so pressing and releasing ease in instead of snapping.
+    inputEase: 0.12,
     planetOrder: ['mars', 'earth', 'moon'],
 
     // Holding the spin in the red zone too long makes the astronaut stumble.
@@ -49,7 +53,7 @@
 
     boss: {
       blob: {
-        name: 'GIGANT BLOB', size: 0.85, hp: 16, creep: 0.0024, damage: 25,
+        name: 'GIGANT BLOB', size: 0.85, hp: 20, creep: 0.0024, damage: 25,
         hitSpeed: 1.3,       // × planet threshold needed to land a hit
         knockback: 1.4, stunFrames: 50,
         gooEvery: [260, 170],   // frames between goo volleys (calm, enraged)

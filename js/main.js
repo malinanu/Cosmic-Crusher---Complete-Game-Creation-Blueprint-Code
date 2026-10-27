@@ -88,7 +88,7 @@
         steps++;
       }
       if (steps === 6) acc = 0;
-      game.render();
+      game.render(acc / STEP);
       CC.hud.update(game);
       requestAnimationFrame(frame);
     }

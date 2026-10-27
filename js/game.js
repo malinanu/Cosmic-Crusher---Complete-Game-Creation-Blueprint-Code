@@ -22,7 +22,9 @@
     this.planetKey = 'moon';
     this.planet = CC.config.planets.moon;
     this.angle = 0;
+    this.prevAngle = 0;
     this.omega = 0;
+    this.drive = 0;
     this.resetRun();
     this.resize();
   }
@@ -102,6 +104,7 @@
     this.resetRun();
     this.level = CC.levels.get(n);
     this.omega = 0;
+    this.drive = 0;
     this.state = 'intro';
     this.stateTimer = 110;
     this.banner = { title: 'LEVEL ' + this.level.level, sub: this.level.boss ? 'BOSS LEVEL' : 'WAVE 1 / ' + this.level.waves.length };
@@ -116,6 +119,7 @@
 
   Game.prototype.update = function (input) {
     this.t++;
+    this.prevAngle = this.angle;
     if (this.state === 'paused' || this.state === 'done' || this.state === 'idle') return;
     var cfg = CC.config;
     var A = cfg.astronaut;
@@ -127,16 +131,18 @@
     // --- spin ---
     var superOn = this.superTime > 0;
     var dir = this.stumble > 0 || this.state === 'lost' ? 0 : input.dir;
+    if (superOn && Math.abs(dir) < 0.1) dir = this.facing; // super keeps you rolling
+    this.drive += (dir - this.drive) * cfg.inputEase;
     var accel = P.accel * (superOn ? 1.4 : 1);
     var friction = superOn ? Math.max(P.friction, 0.985) : P.friction;
-    this.omega = (this.omega - dir * accel) * friction;
+    this.omega = (this.omega - this.drive * accel) * friction;
     var max = P.maxSpin * (superOn ? 1.15 : 1);
     if (this.omega > max) this.omega = max;
     if (this.omega < -max) this.omega = -max;
     this.angle = (this.angle + this.omega) % TAU;
     var speed = Math.abs(this.omega);
-    if (speed > 0.004) this.facing = this.omega < 0 ? 1 : -1;
-    this.runPhase += speed * 4.2;
+    if (speed > 0.002) this.facing = this.omega < 0 ? 1 : -1;
+    this.runPhase += speed * 7;
 
     // --- overheat ---
     if (!superOn && !attract && speed > cfg.overheat.zone * P.maxSpin) this.heat++;
@@ -364,8 +370,6 @@
   Game.prototype.activateSuper = function () {
     this.superTime = CC.config.astronaut.superFrames;
     this.superCharge = 0;
-    var dirSign = this.omega !== 0 ? Math.sign(this.omega) : -this.facing;
-    this.omega = dirSign * this.planet.maxSpin;
     this.fx.ring(this.cx, this.cy - this.R - this.R * 0.25, 10, this.R * 1.6, '#62f0ff', 34);
     this.fx.pop('SUPER CRUSH!', this.cx, this.cy + this.R * 0.3, this.R * 0.22, 'combo', { max: 80, vy: -0.2, rot: 0 });
     this.addShake(10);
@@ -654,9 +658,15 @@
 
   // ---- Drawing -------------------------------------------------------------------------
 
-  Game.prototype.render = function () {
+  // alpha = how far we are between the last update and the next, so the
+  // planet turns smoothly on screens faster than 60 Hz.
+  Game.prototype.render = function (alpha) {
     var ctx = this.ctx;
     var R = this.R;
+    var simAngle = this.angle;
+    if (alpha != null && this.state !== 'paused') {
+      this.angle = this.prevAngle + wrap(simAngle - this.prevAngle) * alpha;
+    }
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     var far = this.planetKey === 'earth' ? 'moon' : 'earth';
     this.bg.draw(ctx, this.t, Math.abs(this.omega), far);
@@ -678,6 +688,7 @@
     ctx.restore();
 
     if (this.banner) this.drawBanner(ctx);
+    this.angle = simAngle;
   };
 
   Game.prototype.drawAstronaut = function (ctx) {
@@ -700,15 +711,15 @@
     } else if (this.stumble > 0) {
       key = 'astro_idle';
       ctx.rotate(Math.sin(this.t * 0.5) * 0.35);
-    } else if (speed > 0.006) {
+    } else if (speed > 0.003) {
       var f = Math.floor(this.runPhase) % 4;
       key = ['astro_run1', 'astro_run2', 'astro_run3', 'astro_run2'][f];
-      ctx.rotate(this.facing * Math.min(0.18, speed * 2));
+      ctx.rotate(this.facing * Math.min(0.18, speed * 4));
     } else {
       key = 'astro_idle'; hh = h * 1.02;
       ctx.translate(0, Math.sin(this.t * 0.06) * 1.2);
     }
-    if (!CC.assets.drawFeet(ctx, key, hh, flip)) CC.assets.drawAstronaut(ctx, h, speed > 0.006 ? 'run' : 'idle', this.runPhase * 4);
+    if (!CC.assets.drawFeet(ctx, key, hh, flip)) CC.assets.drawAstronaut(ctx, h, speed > 0.003 ? 'run' : 'idle', this.runPhase * 4);
     ctx.restore();
 
     if (this.superTime > 0 && this.state !== 'lost') {
