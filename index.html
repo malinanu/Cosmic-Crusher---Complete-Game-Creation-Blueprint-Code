@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#070818">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="description" content="AstroSpin: spin the planet to crush alien invaders.">
   <title>AstroSpin</title>
   <link rel="stylesheet" href="css/fonts.css">
@@ -46,6 +48,10 @@
         <div class="super-label" id="superLabel">SUPER BAR</div>
       </div>
       <div class="hud-icons">
+        <button id="btnFullscreen" class="icon-btn" aria-label="Toggle Fullscreen">
+          <svg class="fs-enter" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <svg class="fs-exit hidden" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+        </button>
         <button id="btnPause" class="icon-btn" aria-label="Pause">
           <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
         </button>
@@ -109,6 +115,10 @@
   </div>
 
   <div id="menu" class="screen">
+    <button id="btnMenuFullscreen" class="icon-btn menu-fs" aria-label="Fullscreen">
+      <svg class="fs-enter" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <svg class="fs-exit hidden" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+    </button>
     <button id="btnMenuSettings" class="icon-btn menu-gear" data-go="settings" aria-label="Settings">
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <g stroke="none">
@@ -156,6 +166,7 @@
         </label>
       </div>
       <div class="group">
+        <div class="row"><span>FULLSCREEN</span><button class="toggle" id="setFullscreen" role="switch"></button></div>
         <div class="row"><span>VIBRATION</span><button class="toggle" id="setVibration" role="switch"></button></div>
         <div class="row"><span>SCREEN SHAKE</span><button class="toggle" id="setShake" role="switch"></button></div>
       </div>

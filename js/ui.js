@@ -268,6 +268,30 @@
     });
     paintSlider($('setMusic'));
     paintSlider($('setSfx'));
+    updateFullscreenUI();
+  }
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  }
+
+  function toggleFullscreen() {
+    if (!isFullscreen()) {
+      var el = document.documentElement;
+      var rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      if (rfs) rfs.call(el).catch(function () {});
+    } else {
+      var efs = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (efs) efs.call(document).catch(function () {});
+    }
+  }
+
+  function updateFullscreenUI() {
+    var fs = isFullscreen();
+    document.querySelectorAll('.fs-enter').forEach(function (el) { el.classList.toggle('hidden', fs); });
+    document.querySelectorAll('.fs-exit').forEach(function (el) { el.classList.toggle('hidden', !fs); });
+    var setBtn = $('setFullscreen');
+    if (setBtn) setToggle(setBtn, fs);
   }
 
   function setToggle(btn, on) {
@@ -310,15 +334,29 @@
       settings().shake = !settings().shake;
       CC.storage.save(); renderSettings(); applySettings();
     };
+    var setFs = $('setFullscreen');
+    if (setFs) {
+      setFs.onclick = function () {
+        toggleFullscreen();
+      };
+    }
     document.querySelectorAll('.style-btn').forEach(function (b) {
       b.onclick = function () {
         var mode = b.getAttribute('data-controls');
         $('tiltNote').textContent = '';
         if (mode === 'tilt') {
-          CC.input.enableTilt().then(function (ok) {
+          CC.input.enableTilt().then(function (res) {
+            var ok = (typeof res === 'object') ? res.ok : !!res;
+            var reason = (typeof res === 'object') ? res.reason : '';
             if (!ok) {
-              $('tiltNote').textContent = 'Tilt isn\'t available here, so the D-pad stays on.';
-              settings().controls = 'dpad';
+              if (reason === 'insecure' || (typeof window !== 'undefined' && window.isSecureContext === false)) {
+                $('tiltNote').textContent = 'Tilt requires HTTPS (SSL). Enable SSL in CloudPanel to use tilt.';
+              } else if (reason === 'denied') {
+                $('tiltNote').textContent = 'Motion sensor permission was denied in your browser settings.';
+              } else {
+                $('tiltNote').textContent = 'Tilt sensors blocked or unavailable. Check browser permissions.';
+              }
+              settings().controls = 'tilt';
             } else {
               settings().controls = 'tilt';
               $('tiltNote').textContent = 'Tilt your phone left and right to spin.';
@@ -404,7 +442,14 @@
       b.addEventListener('click', function () {
         CC.audio.play('ui');
         var a = b.getAttribute('data-action');
-        if (a === 'start') show('levels');
+        if (a === 'start') {
+          if (touch && !isFullscreen()) {
+            var el = document.documentElement;
+            var rfs = el.requestFullscreen || el.webkitRequestFullscreen;
+            if (rfs) rfs.call(el).catch(function () {});
+          }
+          show('levels');
+        }
         else if (a === 'levels') goLevels();
         else if (a === 'resume') resumeGame();
         else if (a === 'restart') startLevel(game.level.level);
@@ -416,6 +461,15 @@
           show('howto');
         }
       });
+    });
+
+    var btnFs = $('btnFullscreen');
+    if (btnFs) btnFs.addEventListener('click', function () { CC.audio.play('ui'); toggleFullscreen(); });
+    var btnMenuFs = $('btnMenuFullscreen');
+    if (btnMenuFs) btnMenuFs.addEventListener('click', function () { CC.audio.play('ui'); toggleFullscreen(); });
+
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(function (ev) {
+      document.addEventListener(ev, updateFullscreenUI);
     });
 
     $('btnPause').addEventListener('click', function () { CC.audio.play('ui'); pauseGame(); });

@@ -233,6 +233,12 @@ input[type=range]::-moz-range-thumb {
   width: 46px; height: 46px; padding: 6px;
 }
 .menu-gear:active { transform: scale(0.92); }
+.menu-fs {
+  position: absolute; z-index: 2;
+  top: calc(12px + var(--safe-t)); left: calc(12px + var(--safe-l));
+  width: 46px; height: 46px; padding: 7px;
+}
+.menu-fs:active { transform: scale(0.92); }
 .menu-spacer { flex: 1; min-height: 20px; }
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; margin: 0 auto; }
 .menu-col .menu-buttons { margin-bottom: 8px; }

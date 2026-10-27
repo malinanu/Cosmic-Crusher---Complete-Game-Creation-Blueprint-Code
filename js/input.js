@@ -140,21 +140,35 @@
   }
 
   // iOS asks for motion permission, and only from a tap.
+  // Modern browsers require a secure context (HTTPS) for DeviceOrientationEvent.
   function enableTilt() {
     tilt.enabled = true;
     function listen() {
       if (!tilt.listening) {
-        window.addEventListener('deviceorientation', onOrientation);
+        window.addEventListener('deviceorientation', onOrientation, true);
+        window.addEventListener('deviceorientationabsolute', onOrientation, true);
         tilt.listening = true;
       }
       return true;
     }
+    if (typeof window !== 'undefined' && window.isSecureContext === false) {
+      listen();
+      return Promise.resolve({ ok: false, reason: 'insecure' });
+    }
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       return DeviceOrientationEvent.requestPermission()
-        .then(function (state) { return state === 'granted' ? listen() : false; })
-        .catch(function () { return false; });
+        .then(function (state) {
+          if (state === 'granted') { listen(); return { ok: true }; }
+          return { ok: false, reason: 'denied' };
+        })
+        .catch(function () { return { ok: false, reason: 'denied' }; });
     }
-    return Promise.resolve(typeof DeviceOrientationEvent !== 'undefined' ? listen() : false);
+    if (typeof DeviceOrientationEvent !== 'undefined' || 'ondeviceorientation' in window) {
+      listen();
+      return Promise.resolve({ ok: true });
+    }
+    listen();
+    return Promise.resolve({ ok: false, reason: 'unsupported' });
   }
 
   function disableTilt() { tilt.enabled = false; tilt.value = 0; }
