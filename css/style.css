@@ -477,18 +477,88 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .g-hub { fill: #2a4a7a; stroke: #bff3ff; stroke-width: 3; }
 .gauge svg { filter: drop-shadow(0 0 6px rgba(65, 216, 255, 0.5)); }
 
-.dpad { position: relative; width: clamp(104px, min(38vw, 22vh), 170px); aspect-ratio: 1; display: block; border-radius: 50%; border: 2px solid rgba(120, 190, 255, 0.45); background: radial-gradient(circle, rgba(40, 80, 140, 0.4), rgba(10, 24, 60, 0.35)); }
-#hud.tilt-mode .dpad { opacity: 0.6; }
+/* ---------- Floating Virtual Joystick ---------- */
+.joystick-zone {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 50vw;
+  height: 65vh;
+  z-index: 15;
+  touch-action: none;
+  pointer-events: auto;
+}
+
+.joystick-base {
+  position: fixed;
+  left: calc(85px + var(--safe-l));
+  bottom: calc(140px + var(--safe-b));
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(16, 40, 95, 0.5) 0%, rgba(6, 16, 44, 0.75) 75%, rgba(65, 216, 255, 0.2) 100%);
+  border: 2px solid rgba(65, 216, 255, 0.45);
+  box-shadow: 0 0 16px rgba(65, 216, 255, 0.3), inset 0 0 12px rgba(65, 216, 255, 0.18);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  opacity: 0.82;
+  z-index: 16;
+}
+
+.joystick-base.active {
+  border-color: #57e3ff;
+  box-shadow: 0 0 24px rgba(87, 227, 255, 0.7), inset 0 0 16px rgba(87, 227, 255, 0.4);
+  opacity: 1;
+}
+
+.joystick-ring {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px dashed rgba(65, 216, 255, 0.4);
+  pointer-events: none;
+}
+
+.joystick-stick {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8ae9ff 0%, #3098ff 55%, #0e459a 100%);
+  border: 2px solid #bdf1ff;
+  box-shadow: 0 0 14px rgba(65, 216, 255, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(0, 0);
+  transition: transform 0.05s ease-out;
+}
+
+.joystick-base.active .joystick-stick {
+  transition: none;
+  box-shadow: 0 0 22px rgba(87, 227, 255, 1), inset 0 2px 6px rgba(255, 255, 255, 0.9);
+}
+
+.stick-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.85);
+}
+
+#hud.tilt-mode .joystick-zone,
+#hud.tilt-mode .joystick-base {
+  display: none !important;
+}
+
 /* YouTube's player has its own mute; the game must not add another. */
 .platform-youtube #btnSound { display: none; }
-.dp { position: absolute; width: 34%; height: 34%; padding: 18%; border: 2px solid rgba(160, 210, 255, 0.55); background: rgba(60, 110, 180, 0.55); }
-.dp svg { width: 100%; height: 100%; fill: rgba(220, 240, 255, 0.85); }
-.dp.pressed { background: rgba(110, 190, 255, 0.85); }
-.dp.up { top: 6%; left: 33%; border-radius: 10px 10px 4px 4px; padding: 6%; }
-.dp.down { bottom: 6%; left: 33%; border-radius: 4px 4px 10px 10px; padding: 6%; }
-.dp.left { left: 6%; top: 33%; border-radius: 10px 4px 4px 10px; padding: 6%; }
-.dp.right { right: 6%; top: 33%; border-radius: 4px 10px 10px 4px; padding: 6%; }
-.dp-hub { position: absolute; width: 22%; height: 22%; left: 39%; top: 39%; border-radius: 50%; background: rgba(90, 140, 200, 0.6); }
 
 .hud-br { position: absolute; right: calc(10px + var(--safe-r)); bottom: calc(10px + var(--safe-b)); display: flex; gap: 14px; }
 .act-btn {

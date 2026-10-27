@@ -75,14 +75,15 @@
       <div class="bar boss"><div id="bossFill" class="fill"></div></div>
     </div>
 
-    <div class="hud-bl">
-      <div id="dpad" class="dpad">
-        <button class="dp up" id="dpUp" aria-label="Boost"><svg viewBox="0 0 24 24"><path d="M12 6l7 10H5z"/></svg></button>
-        <button class="dp left" id="dpLeft" aria-label="Spin left"><svg viewBox="0 0 24 24"><path d="M6 12l10-7v14z"/></svg></button>
-        <button class="dp right" id="dpRight" aria-label="Spin right"><svg viewBox="0 0 24 24"><path d="M18 12L8 5v14z"/></svg></button>
-        <button class="dp down" id="dpDown" aria-label="Slam"><svg viewBox="0 0 24 24"><path d="M12 18l7-10H5z"/></svg></button>
-        <span class="dp-hub"></span>
+    <!-- Floating Virtual Joystick -->
+    <div id="joystickZone" class="joystick-zone" aria-label="Virtual Joystick">
+      <div id="joystickBase" class="joystick-base">
+        <div class="joystick-ring"></div>
+        <div id="joystickStick" class="joystick-stick">
+          <div class="stick-knob"></div>
+        </div>
       </div>
+    </div>
       <div class="gauge">
         <svg id="gauge" viewBox="0 0 200 118" role="img" aria-label="Roll speed gauge"></svg>
         <div class="gauge-label">ROLL SPEED</div>
@@ -178,8 +179,12 @@
             <span>TILT/GYRO</span>
           </button>
           <button class="style-btn" data-controls="dpad">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 6h10v13h13v10H29v13H19V29H6V19h13z" fill="none" stroke-width="3" stroke-linejoin="round"/></svg>
-            <span>VIRTUAL D-PAD</span>
+            <svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="24" r="18" fill="none" stroke="currentColor" stroke-width="3"/>
+              <circle cx="24" cy="24" r="8" fill="currentColor"/>
+              <path d="M24 6v4M24 38v4M6 24h4M38 24h4" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span>JOYSTICK</span>
           </button>
         </div>
         <div class="hint" id="tiltNote"></div>

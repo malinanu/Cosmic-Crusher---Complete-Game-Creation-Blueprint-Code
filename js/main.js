@@ -48,6 +48,9 @@
 
     CC.input.init({
       canvas: canvas,
+      joystickZone: document.getElementById('joystickZone'),
+      joystickBase: document.getElementById('joystickBase'),
+      joystickStick: document.getElementById('joystickStick'),
       left: document.getElementById('dpLeft'),
       right: document.getElementById('dpRight'),
       up: document.getElementById('dpUp'),

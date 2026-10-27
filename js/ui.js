@@ -366,6 +366,7 @@
         } else {
           CC.input.disableTilt();
           settings().controls = 'dpad';
+          $('tiltNote').textContent = 'Slide the virtual joystick left and right to spin with analog control.';
           CC.storage.save(); renderSettings(); applySettings();
         }
       };

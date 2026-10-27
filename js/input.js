@@ -9,6 +9,7 @@
   var pending = { boost: false, slam: false, super: false };
   var tilt = { enabled: false, value: 0, listening: false };
   var drag = { active: false, id: null, lastX: 0, lastY: 0, startX: 0, startY: 0, startT: 0, vel: 0 };
+  var joystick = { active: false, id: null, dir: 0, originX: 0, originY: 0, maxRadius: 52, deadzone: 5, boostTriggered: false, slamTriggered: false };
   var handlers = {};
   var enabled = false;
 
@@ -19,6 +20,7 @@
     enabled = v;
     if (!v) {
       keys.left = keys.right = pad.left = pad.right = false;
+      joystick.active = false; joystick.dir = 0;
       pending.boost = pending.slam = pending.super = false;
       drag.active = false; drag.vel = 0;
     }
@@ -93,6 +95,101 @@
     }
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
+  }
+
+  // Floating virtual joystick: smooth analog thumbstick anywhere on the left zone.
+  function bindJoystick(zone, base, stick) {
+    if (!zone || !base || !stick) return;
+
+    function start(e) {
+      if (!enabled || joystick.active) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      joystick.active = true;
+      joystick.id = e.pointerId;
+      joystick.dir = 0;
+      joystick.boostTriggered = false;
+      joystick.slamTriggered = false;
+
+      joystick.originX = e.clientX;
+      joystick.originY = e.clientY;
+
+      base.style.left = e.clientX + 'px';
+      base.style.top = e.clientY + 'px';
+      base.style.bottom = 'auto';
+      base.classList.add('floating');
+      base.classList.add('active');
+      stick.style.transform = 'translate(0px, 0px)';
+
+      try { zone.setPointerCapture(e.pointerId); } catch (err) {}
+      e.preventDefault();
+    }
+
+    function move(e) {
+      if (!joystick.active || e.pointerId !== joystick.id) return;
+      var dx = e.clientX - joystick.originX;
+      var dy = e.clientY - joystick.originY;
+      var dist = Math.hypot(dx, dy);
+
+      var stickX = dx;
+      var stickY = dy;
+      if (dist > joystick.maxRadius) {
+        var angle = Math.atan2(dy, dx);
+        stickX = Math.cos(angle) * joystick.maxRadius;
+        stickY = Math.sin(angle) * joystick.maxRadius;
+      }
+
+      stick.style.transform = 'translate(' + stickX.toFixed(1) + 'px, ' + stickY.toFixed(1) + 'px)';
+
+      var absX = Math.abs(stickX);
+      if (absX < joystick.deadzone) {
+        joystick.dir = 0;
+      } else {
+        var sign = Math.sign(stickX);
+        var norm = (absX - joystick.deadzone) / (joystick.maxRadius - joystick.deadzone);
+        joystick.dir = Math.max(-1, Math.min(1, sign * norm));
+      }
+
+      // Vertical gestures: flick/push up = boost, pull down = slam
+      if (stickY < -0.65 * joystick.maxRadius && !joystick.boostTriggered) {
+        pending.boost = true;
+        joystick.boostTriggered = true;
+      } else if (stickY > -0.3 * joystick.maxRadius) {
+        joystick.boostTriggered = false;
+      }
+
+      if (stickY > 0.65 * joystick.maxRadius && !joystick.slamTriggered) {
+        pending.slam = true;
+        joystick.slamTriggered = true;
+      } else if (stickY < 0.3 * joystick.maxRadius) {
+        joystick.slamTriggered = false;
+      }
+
+      e.preventDefault();
+    }
+
+    function end(e) {
+      if (!joystick.active || (e && e.pointerId !== joystick.id)) return;
+      joystick.active = false;
+      joystick.id = null;
+      joystick.dir = 0;
+      joystick.boostTriggered = false;
+      joystick.slamTriggered = false;
+
+      base.classList.remove('floating');
+      base.classList.remove('active');
+      stick.style.transform = 'translate(0px, 0px)';
+      base.style.left = '';
+      base.style.top = '';
+      base.style.bottom = '';
+    }
+
+    zone.addEventListener('pointerdown', start);
+    zone.addEventListener('pointermove', move);
+    zone.addEventListener('pointerup', end);
+    zone.addEventListener('pointercancel', end);
+    zone.addEventListener('lostpointercapture', end);
+    zone.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
 
   // Hold-style button: sets a flag while pressed.
@@ -178,6 +275,7 @@
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', function () { keys.left = keys.right = false; });
     bindDrag(opts.canvas);
+    bindJoystick(opts.joystickZone, opts.joystickBase, opts.joystickStick);
     hold(opts.left, function (v) { pad.left = v; });
     hold(opts.right, function (v) { pad.right = v; });
     tap(opts.up, function () { if (enabled) pending.boost = true; });
@@ -191,6 +289,7 @@
     if (enabled) {
       if (keys.left || pad.left) dir -= 1;
       if (keys.right || pad.right) dir += 1;
+      if (joystick.active) dir += joystick.dir;
       if (tilt.enabled) dir += tilt.value;
       if (drag.active) {
         dir += Math.max(-1, Math.min(1, drag.vel / 5));
