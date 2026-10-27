@@ -15,6 +15,7 @@ jobs:
   build-and-deploy:
     name: Build & Deploy Web Bundle
     runs-on: ubuntu-latest
+    environment: CLOUDPANEL_STAGING
 
     steps:
       - name: Checkout repository
@@ -43,8 +44,12 @@ jobs:
 
       - name: Configure SSH key
         run: |
+          if [ -z "${{ secrets.CLOUDPANEL_HOST }}" ]; then
+            echo "Error: CLOUDPANEL_HOST secret is missing or empty."
+            exit 1
+          fi
           mkdir -p ~/.ssh
-          echo "${{ secrets.CLOUDPANEL_SSH_KEY }}" > ~/.ssh/cloudpanel_key
+          printf '%s\n' "${{ secrets.CLOUDPANEL_SSH_KEY }}" > ~/.ssh/cloudpanel_key
           chmod 600 ~/.ssh/cloudpanel_key
           ssh-keyscan -p ${{ secrets.CLOUDPANEL_PORT || '22' }} ${{ secrets.CLOUDPANEL_HOST }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
