@@ -28,6 +28,17 @@ for (let n = 1; n <= L.maxPlayable; n++) {
   check(lv.sector.id === 1, `L${n} is in sector 1`);
 }
 check(L.get(10).boss.mini === true && L.get(20).boss.mini === false, 'mini boss on 10, full boss on 20');
+
+// Three-star target scores: positive, a multiple of 250, and growing with
+// the level (boss levels have a shorter minion phase, so compare them with
+// each other).
+let prev = 0, prevBoss = 0;
+for (let n = 1; n <= L.maxPlayable; n++) {
+  const t = L.get(n).target;
+  check(Number.isInteger(t) && t > 0 && t % 250 === 0, `L${n} star target is a positive multiple of 250 (${t})`);
+  if (n % 10 === 0) { check(t > prevBoss, `L${n} boss target grows`); prevBoss = t; }
+  else { check(t > prev, `L${n} target grows (${prev} -> ${t})`); prev = t; }
+}
 check(L.get(99).level === L.maxPlayable, 'levels past the playable range clamp');
 
 const rows = [1, 4, 10, 11, 19, 20].map((n) => {
@@ -35,5 +46,6 @@ const rows = [1, 4, 10, 11, 19, 20].map((n) => {
   return `L${String(n).padStart(2)}  spawn ${lv.spawnFrames.toFixed(1)}f  speed ${lv.speed.toFixed(2)}  goal ${lv.goal}  waves ${lv.waves.join('/')}  burst ${lv.burst}${lv.boss ? '  BOSS' : ''}`;
 });
 console.log(rows.join('\n'));
+console.log('3-star targets: ' + Array.from({ length: L.maxPlayable }, (_, i) => `L${i + 1} ${L.get(i + 1).target}`).join(', '));
 console.log(failed ? `\n${failed} check(s) failed` : '\nlevel table OK');
 process.exit(failed ? 1 : 0);

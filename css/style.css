@@ -80,6 +80,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* A panel taller than the screen scrolls from its top instead of being cut off. */
+  justify-content: safe center;
   padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
   z-index: 20;
   overflow-y: auto;
@@ -223,7 +225,14 @@ input[type=range]::-moz-range-thumb {
   display: flex; flex-direction: column; align-items: center;
   width: 100%; max-width: 380px; height: 100%;
 }
-.logo { width: min(330px, 82vw); margin-top: 2vh; filter: drop-shadow(0 0 18px rgba(120, 90, 255, 0.55)); }
+/* Portrait: the logo starts below the settings gear in the corner. */
+.logo { width: min(330px, 82vw); margin-top: max(2vh, 46px); filter: drop-shadow(0 0 18px rgba(120, 90, 255, 0.55)); }
+.menu-gear {
+  position: absolute; z-index: 2;
+  top: calc(12px + var(--safe-t)); right: calc(12px + var(--safe-r));
+  width: 46px; height: 46px; padding: 6px;
+}
+.menu-gear:active { transform: scale(0.92); }
 .menu-spacer { flex: 1; min-height: 20px; }
 .menu-buttons { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; margin: 0 auto; }
 .menu-col .menu-buttons { margin-bottom: 8px; }
@@ -235,10 +244,18 @@ input[type=range]::-moz-range-thumb {
   .menu-col .menu-buttons { grid-column: 3; grid-row: 1; }
   .menu-foot { grid-column: 1 / span 3; }
 }
+/* Short landscape: one-line, compact buttons so the stack stays below the ⚙. */
+@media (min-aspect-ratio: 1/1) and (max-height: 520px) {
+  .menu-col .menu-buttons { gap: 8px; }
+  .menu-col .menu-buttons .btn { white-space: nowrap; font-size: clamp(13px, 2.4vw, 19px); padding: 9px 10px; }
+  .menu-col .menu-buttons .btn-big { font-size: clamp(16px, 3.2vw, 26px); }
+}
 
 /* ---------- Level select ---------- */
 
-.level-list { display: flex; flex-direction: column; gap: 12px; max-height: 62vh; overflow-y: auto; padding-right: 2px; touch-action: pan-y; }
+.level-total { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; color: var(--muted); }
+.star-total { font-size: 18px; color: var(--yellow); text-shadow: 0 0 8px rgba(255, 210, 63, 0.6); }
+.level-list { display: flex; flex-direction: column; gap: 12px; max-height: 62vh; overflow-y: auto; padding: 8px 4px 4px 2px; touch-action: pan-y; }
 .sector { padding: 10px; border-radius: 14px; background: rgba(6, 14, 38, 0.7); border: 1px solid rgba(110, 170, 240, 0.3); }
 .sector-head { display: flex; justify-content: space-between; font-size: 14px; color: var(--cyan); margin-bottom: 8px; }
 .sector-head .range { color: var(--muted); }
@@ -262,6 +279,10 @@ input[type=range]::-moz-range-thumb {
 .level-tile.boss { background: linear-gradient(180deg, #ff8a3d, #b5341a); box-shadow: 0 3px 0 #5a1606, inset 0 2px 0 rgba(255, 255, 255, 0.3); }
 .level-tile .tag { position: absolute; top: -7px; right: -6px; font-size: 8px; padding: 2px 4px; border-radius: 6px; background: var(--red); }
 .level-tile.locked { filter: grayscale(0.85) brightness(0.6); cursor: default; }
+/* The next level to play. */
+.level-tile.next { border-color: var(--yellow); animation: nexttile 0.9s ease-in-out infinite alternate; scroll-margin: 14px; }
+.level-tile .play { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: var(--yellow); color: #3a2400; }
+@keyframes nexttile { to { box-shadow: 0 3px 0 #0b2160, 0 0 16px rgba(255, 210, 63, 0.9), inset 0 2px 0 rgba(255, 255, 255, 0.3); } }
 
 /* ---------- Leaderboard ---------- */
 
@@ -324,9 +345,31 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .stars span.on:nth-child(2) { animation-delay: 0.15s; }
 .stars span.on:nth-child(3) { animation-delay: 0.3s; }
 @keyframes starpop { from { transform: scale(0.2); } 70% { transform: scale(1.3); } to { transform: scale(1); } }
+.res-goals { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.res-goals li { display: flex; align-items: center; gap: 8px; padding: 0 12px; }
+.res-goals li::before { content: "✗"; width: 16px; text-align: center; color: rgba(255, 120, 120, 0.8); }
+.res-goals li.done { color: #dce9ff; }
+.res-goals li.done::before { content: "★"; color: var(--yellow); }
 .res-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .res-stats div { display: flex; justify-content: space-between; padding: 6px 12px; border-radius: 10px; background: rgba(6, 14, 38, 0.7); font-size: 16px; }
 .res-stats b { font-weight: normal; color: var(--yellow); }
+/* Short screens: smaller stars, stats side by side; in landscape the
+   buttons sit in a row too, so the whole panel fits without scrolling. */
+@media (max-height: 640px) {
+  #results .stars { font-size: 32px; margin: 0 0 4px; }
+  #results .res-splat { width: 96px; }
+  .res-goals { font-size: 12px; gap: 2px; margin-bottom: 6px; }
+  .res-stats { flex-direction: row; margin-bottom: 6px; }
+  .res-stats div { flex: 1; flex-direction: column; align-items: center; text-align: center; padding: 4px 6px; font-size: 11px; }
+  .res-stats b { font-size: 17px; }
+}
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  #results .panel { padding-top: 34px; }
+  #results .new-best { font-size: 18px; margin-bottom: 2px; }
+  #results .res-rank { font-size: 13px; margin-bottom: 6px; }
+  #results .menu-buttons { flex-direction: row; gap: 8px; }
+  #results .menu-buttons .btn { font-size: 15px; padding: 9px 6px; white-space: nowrap; }
+}
 .new-best { text-align: center; font-family: var(--font-pop); font-size: 24px; color: var(--yellow); margin-bottom: 8px; animation: pulse 0.8s infinite alternate; }
 @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
 .res-rank { text-align: center; font-size: 15px; color: var(--cyan); margin-bottom: 8px; }
@@ -361,6 +404,9 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .bar.load .fill { background: linear-gradient(90deg, #39c5ff, #a46bff); }
 .score, .wave { font-size: clamp(16px, 4.6vw, 24px); color: #bfefff; text-shadow: 0 0 8px rgba(65, 216, 255, 0.85), 0 2px 0 #062048; }
 .wave { display: flex; align-items: center; gap: 6px; font-size: clamp(14px, 3.8vw, 19px); }
+.target { font-size: clamp(11px, 3.1vw, 15px); color: rgba(255, 220, 120, 0.75); text-shadow: 0 2px 0 #062048; }
+.target .tstars { letter-spacing: -2px; }
+.target.hit { color: var(--yellow); text-shadow: 0 0 8px rgba(255, 210, 63, 0.9), 0 2px 0 #062048; }
 .wave-ring { width: 22px; height: 22px; transform: rotate(-90deg); }
 .wave-ring circle { fill: none; stroke-width: 5; }
 .wave-ring .track { stroke: rgba(255, 255, 255, 0.15); }
@@ -473,6 +519,9 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
   white-space: nowrap;
 }
 #hud.touch .key-hint { display: none; }
+/* Small windows have no room for it between the gauge and the buttons;
+   the how-to screen lists the keys. */
+@media (max-width: 1100px), (max-height: 560px) { .key-hint { display: none; } }
 
 /* Landscape phones / desktop: a labelled row under the pause button. */
 @media (min-aspect-ratio: 1/1) {
@@ -504,5 +553,5 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen.show, .stars span.on, .new-best, .bar.super.ready, #btnSuper.ready, .bar.hp.low { animation: none; }
+  .screen.show, .stars span.on, .level-tile.next, .new-best, .bar.super.ready, #btnSuper.ready, .bar.hp.low { animation: none; }
 }

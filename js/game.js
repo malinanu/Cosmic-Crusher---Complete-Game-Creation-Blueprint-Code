@@ -133,7 +133,10 @@
     this.drive = 0;
     this.state = 'intro';
     this.stateTimer = 110;
-    this.banner = { title: 'LEVEL ' + this.level.level, sub: this.level.boss ? 'BOSS LEVEL' : 'WAVE 1 / ' + this.level.waves.length };
+    this.banner = {
+      title: 'LEVEL ' + this.level.level, sub: this.level.boss ? 'BOSS LEVEL' : 'WAVE 1 / ' + this.level.waves.length,
+      goal: '★★★ ' + this.level.target.toLocaleString('en-US') + ' PTS'
+    };
     this.emit('levelStart', { level: this.level.level });
   };
 
@@ -638,12 +641,15 @@
     this.emit('dead');
   };
 
+  // ★ clear the level, ★★ with half your health or more, ★★★ also reach
+  // the level's target score; no stars for a loss.
   Game.prototype.result = function (won) {
-    var max = CC.config.astronaut.maxHealth;
-    var stars = !won ? 0 : this.health >= max * 0.7 ? 3 : this.health >= max * 0.35 ? 2 : 1;
+    var healthy = this.health >= CC.config.astronaut.maxHealth * CC.config.stars.health;
+    var target = this.level.target;
+    var stars = !won ? 0 : !healthy ? 1 : this.score >= target ? 3 : 2;
     return {
       won: won, level: this.level.level, score: this.score, crushes: this.crushes,
-      bestCombo: this.bestCombo, health: this.health, stars: stars
+      bestCombo: this.bestCombo, health: this.health, stars: stars, healthy: healthy, target: target
     };
   };
 
@@ -678,7 +684,8 @@
       boostReady: 1 - this.jumpCooldown / CC.config.astronaut.jump.cooldown,
       boss: this.boss && this.boss.state !== 'fall' ? { name: this.boss.name, hp: this.boss.hp / this.boss.maxHp } : null,
       planet: this.planetKey,
-      level: this.level ? this.level.level : 1
+      level: this.level ? this.level.level : 1,
+      target: this.level ? this.level.target : 0
     };
   };
 
@@ -781,6 +788,13 @@
       ctx.strokeText(b.sub, 0, size * 0.85);
       ctx.fillStyle = '#ffd23f';
       ctx.fillText(b.sub, 0, size * 0.85);
+    }
+    if (b.goal) {
+      ctx.font = Math.round(size * 0.3) + 'px "Russo One", sans-serif';
+      ctx.lineWidth = 4; ctx.strokeStyle = '#0a0620';
+      ctx.strokeText(b.goal, 0, size * 1.32);
+      ctx.fillStyle = '#ffe9a8';
+      ctx.fillText(b.goal, 0, size * 1.32);
     }
     ctx.restore();
   };

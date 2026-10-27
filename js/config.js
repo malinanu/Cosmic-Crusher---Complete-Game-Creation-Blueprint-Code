@@ -64,6 +64,13 @@
 
     combo: { window: 90, max: 8 },
 
+    // Stars: ★ clear the level, ★★ with at least `health` of your health
+    // left, ★★★ also reach the level's target score. The target is what a
+    // strong run scores: crowds of aliens make longer combos, so crush points
+    // per alien grow with burst × (comboBase + comboPerAlive × maxAlive),
+    // fitted with a balance bot over all 20 levels.
+    stars: { health: 0.5, comboBase: 0.82, comboPerAlive: 0.072, clearHealth: 0.75 },
+
     score: {
       slamMultiplier: 1.5,
       bossHit: 500,

@@ -32,7 +32,7 @@ Aliens are landing on your moon, and you have no blaster. All you have is the pl
 - **Enemies:** hopping Lunar Bouncers and armored Spiky Rollers.
 - **Bosses:** the Gigant Blob on levels 10 and 20.
 
-Sector 1 has 20 levels, with 3 stars to earn on each. More sectors are on the way.
+Sector 1 has 20 levels, with 3 stars to earn on each: clear the level, keep at least half your health, and beat its target score. More sectors are on the way.
 
 **Controls:**
 - **Touch:** D-pad or drag to spin; BOOST/SLAM and SHIELD/CRUSH buttons.

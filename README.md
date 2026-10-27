@@ -148,7 +148,7 @@ To use your own icon, replace the files in `mobile/resources/` (same sizes) and 
   | Earth | balanced |
   | Moon | light and slippery: fastest top speed, hardest to stop |
 
-- **Stars.** Clearing a level unlocks the next one. Stars depend on how much health you have left.
+- **Levels and stars.** START GAME opens the level map, where the next level to play glows; clearing a level unlocks the next one. Each level awards up to 3 stars: ★ for clearing it, ★★ for finishing with at least half your health, and ★★★ for also reaching its target score (shown on the intro banner and under your score). Losing earns no stars. The target grows with the level, so combos and slams matter more later on.
 
 ## Project layout
 
@@ -207,6 +207,8 @@ All balance numbers live in `js/config.js`: spin acceleration, friction, top spe
 | `S(L) = max(30, 120 − 0.9L)` | frames between spawns |
 | `V(L) = 0.8 + 0.02L` | alien speed |
 | `G(L) = 15 + 5L` | crushes needed to clear level L |
+
+Each level's three-star target score comes from `CC.config.stars`: the crush goal times the average alien's points, times a combo factor that grows with how many aliens can be on the planet at once, plus boss points and a clear bonus. It is fitted so a strong run reaches it about two times in three. `node tools/check_levels.js` prints every level's target.
 
 Some URL options help when testing:
 

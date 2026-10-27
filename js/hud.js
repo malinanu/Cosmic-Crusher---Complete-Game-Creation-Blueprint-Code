@@ -59,6 +59,8 @@
     el.hud = $('hud');
     el.hp = $('hpFill');
     el.score = $('score');
+    el.target = $('target');
+    el.targetVal = $('targetVal');
     el.waveText = $('waveText');
     el.waveRing = $('waveRing');
     el.superFill = $('superFill');
@@ -90,6 +92,11 @@
       el.hp.parentNode.classList.toggle('low', h.health < 0.3);
     });
     set('score', h.score, function (v) { el.score.textContent = v.toLocaleString('en-US'); });
+    // Third-star target: turns gold once the score reaches it.
+    set('target', h.target + (h.score >= h.target ? 'hit' : ''), function () {
+      el.targetVal.textContent = h.target.toLocaleString('en-US');
+      el.target.classList.toggle('hit', h.score >= h.target);
+    });
     set('wave', h.wave + '/' + h.waves, function () {
       el.waveText.textContent = h.wave > h.waves - 1 && game.level && game.level.boss ? 'BOSS WAVE' : 'WAVE ' + h.wave;
     });

@@ -66,6 +66,12 @@
     CC.audio.startMusic('menu');
   }
 
+  // The level map, with the main menu behind it for BACK.
+  function goLevels() {
+    goMenu();
+    show('levels');
+  }
+
   function startLevel(n) {
     var d = CC.storage.data;
     if (!d.seenHowTo) {
@@ -103,7 +109,7 @@
     if (current && CLOSABLE[current]) { back(); return true; }
     if (current === 'howto') { $('howtoGo').click(); return true; }
     if (current === 'pause') { resumeGame(); return true; }
-    if (current === 'results') { goMenu(); return true; }
+    if (current === 'results') { goLevels(); return true; }
     if (!current && game.mode === 'level') { pauseGame(); return true; }
     return false;
   }
@@ -128,9 +134,13 @@
     $('resTitle').textContent = !result.won ? 'CRUSHED!' : last ? 'SECTOR 1 CLEARED!' : 'LEVEL ' + result.level + ' CLEAR!';
     $('resPlate').classList.toggle('red', !result.won);
     $('resSplat').classList.toggle('hidden', result.won);
-    var stars = $('resStars');
-    stars.classList.toggle('hidden', !result.won);
-    stars.querySelectorAll('span').forEach(function (s, i) { s.classList.toggle('on', i < result.stars); });
+    // Stars always show, empty on a loss; the checklist says what each needs.
+    $('resStars').querySelectorAll('span').forEach(function (s, i) { s.classList.toggle('on', i < result.stars); });
+    $('resStars').setAttribute('aria-label', result.stars + ' of 3 stars');
+    $('goalClear').classList.toggle('done', result.won);
+    $('goalHealth').classList.toggle('done', result.won && result.healthy);
+    $('goalScore').classList.toggle('done', result.won && result.score >= result.target);
+    $('goalScoreVal').textContent = result.target.toLocaleString('en-US');
     $('resScore').textContent = result.score.toLocaleString('en-US');
     $('resCrushes').textContent = result.crushes;
     $('resCombo').textContent = 'x' + result.bestCombo;
@@ -151,7 +161,10 @@
   function renderLevels() {
     var d = CC.storage.data;
     var list = $('levelList');
+    var next = Math.min(d.unlocked, CC.levels.maxPlayable);
+    var nextTile = null;
     list.innerHTML = '';
+    $('starTotal').textContent = '★ ' + CC.storage.totalStars() + ' / ' + CC.levels.maxPlayable * 3;
     CC.levels.sectors.forEach(function (sec) {
       var wrap = document.createElement('div');
       wrap.className = 'sector' + (sec.available ? '' : ' locked');
@@ -172,12 +185,14 @@
           var info = d.levels[n] || { stars: 0, best: 0 };
           var open = n <= d.unlocked;
           var boss = n % 10 === 0;
-          b.className = 'level-tile' + (open ? '' : ' locked') + (boss ? ' boss' : '');
+          b.className = 'level-tile' + (open ? '' : ' locked') + (boss ? ' boss' : '') + (n === next ? ' next' : '');
           b.disabled = !open;
           b.innerHTML = '<span class="num">' + (open ? n : '🔒') + '</span>' +
             '<span class="st">' + [0, 1, 2].map(function (i) { return '<i class="' + (i < info.stars ? 'on' : '') + '">★</i>'; }).join('') + '</span>' +
-            (boss ? '<span class="tag">BOSS</span>' : '');
-          b.setAttribute('aria-label', 'Level ' + n + (open ? '' : ' (locked)'));
+            (boss ? '<span class="tag">BOSS</span>' : '') +
+            (n === next ? '<span class="play">PLAY</span>' : '');
+          b.setAttribute('aria-label', 'Level ' + n + (open ? ', ' + info.stars + ' of 3 stars' : ' (locked)'));
+          if (n === next) nextTile = b;
           (function (lvl) { b.onclick = function () { CC.audio.play('ui'); startLevel(lvl); }; })(n);
           grid.appendChild(b);
         }
@@ -185,6 +200,7 @@
       }
       list.appendChild(wrap);
     });
+    if (nextTile) nextTile.scrollIntoView({ block: 'nearest' });
   }
 
   function renderLeaderboard() {
@@ -388,8 +404,8 @@
       b.addEventListener('click', function () {
         CC.audio.play('ui');
         var a = b.getAttribute('data-action');
-        var d = CC.storage.data;
-        if (a === 'start') startLevel(Math.min(d.unlocked, CC.levels.maxPlayable));
+        if (a === 'start') show('levels');
+        else if (a === 'levels') goLevels();
         else if (a === 'resume') resumeGame();
         else if (a === 'restart') startLevel(game.level.level);
         else if (a === 'retry') startLevel(lastResult ? lastResult.level : 1);

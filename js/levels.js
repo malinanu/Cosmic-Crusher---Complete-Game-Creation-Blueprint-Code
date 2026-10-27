@@ -27,6 +27,17 @@
     return mix;
   }
 
+  // Score needed for the third star (see CC.config.stars).
+  function starTarget(goal, mix, burst, maxAlive, boss) {
+    var C = CC.config, P = C.stars, S = C.score;
+    var weight = 0, points = 0;
+    for (var k in mix) { weight += mix[k]; points += mix[k] * C.enemies[k].score; }
+    var crush = goal * points / weight * burst * (P.comboBase + P.comboPerAlive * maxAlive);
+    var bossPts = boss ? C.boss[boss.type].hp * boss.hpScale * S.bossHit + S.bossDefeat : 0;
+    var clear = C.astronaut.maxHealth * P.clearHealth * S.clearPerHealth;
+    return Math.round((crush + bossPts + clear) / 250) * 250;
+  }
+
   function splitGoal(total, waves) {
     var base = Math.floor(total / waves);
     var out = [];
@@ -59,19 +70,23 @@
         goal = Math.round(goal * 0.4); // shorter minion phase before the boss
       }
       var waves = boss ? 2 : 3 + Math.floor(L / 7);
+      // More aliens per spawn tick later on keeps long levels moving.
+      var burst = 1 + Math.floor(L / 8);
+      var maxAlive = 8 + Math.floor(L / 3);
+      var mix = enemyMix(L);
       return {
         level: L,
         sector: this.sectorFor(L),
         spawnFrames: spawnFrames(L),
         speed: alienSpeed(L),
-        // More aliens per spawn tick later on keeps long levels moving.
-        burst: 1 + Math.floor(L / 8),
-        maxAlive: 8 + Math.floor(L / 3),
+        burst: burst,
+        maxAlive: maxAlive,
         goal: goal,
         waves: splitGoal(goal, waves),
         walkScale: 1 + L * 0.02,
-        mix: enemyMix(L),
-        boss: boss
+        mix: mix,
+        boss: boss,
+        target: starTarget(goal, mix, burst, maxAlive, boss)
       };
     }
   };

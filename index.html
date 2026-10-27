@@ -30,6 +30,7 @@
         <div class="bar hp"><div id="hpFill" class="fill"></div></div>
       </div>
       <div class="score">SCORE: <span id="score">0</span></div>
+      <div class="target" id="target" aria-label="Score needed for three stars"><span class="tstars">★★★</span> <span id="targetVal">0</span></div>
       <div class="wave">
         <span id="waveText">WAVE 1</span>
         <svg class="wave-ring" viewBox="0 0 36 36" aria-hidden="true">
@@ -108,15 +109,25 @@
   </div>
 
   <div id="menu" class="screen">
+    <button id="btnMenuSettings" class="icon-btn menu-gear" data-go="settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <g stroke="none">
+          <rect x="10.3" y="1.5" width="3.4" height="21" rx="1.2"/>
+          <rect x="10.3" y="1.5" width="3.4" height="21" rx="1.2" transform="rotate(45 12 12)"/>
+          <rect x="10.3" y="1.5" width="3.4" height="21" rx="1.2" transform="rotate(90 12 12)"/>
+          <rect x="10.3" y="1.5" width="3.4" height="21" rx="1.2" transform="rotate(135 12 12)"/>
+          <circle cx="12" cy="12" r="7"/>
+          <circle cx="12" cy="12" r="3" fill="#0a183c"/>
+        </g>
+      </svg>
+    </button>
     <div class="menu-col">
       <img class="logo" src="assets/sprites/logo.png" alt="Cosmic Crusher" data-fallback="logo">
       <div class="menu-spacer"></div>
       <div class="menu-buttons">
         <button class="btn btn-orange btn-big" data-action="start">START GAME</button>
-        <button class="btn btn-blue" data-go="levels">LEVELS</button>
         <button class="btn btn-green" data-go="weapons">WEAPONS UPGRADES</button>
         <button class="btn btn-blue" data-go="leaderboard">LEADERBOARD</button>
-        <button class="btn btn-blue" data-go="settings">SETTINGS</button>
       </div>
       <div class="menu-foot">Sector 1 preview · 20 levels</div>
     </div>
@@ -125,6 +136,7 @@
   <div id="levels" class="screen">
     <div class="panel wide">
       <div class="plate"><span>LEVELS</span></div>
+      <div class="level-total"><span>PICK A LEVEL</span><span id="starTotal" class="star-total">★ 0 / 60</span></div>
       <div id="levelList" class="level-list"></div>
     </div>
     <button class="btn btn-red btn-back" data-back>BACK</button>
@@ -200,6 +212,7 @@
         <li><b>BOOST/SLAM</b> jumps; landing sends a shockwave that crushes anything nearby. Press again in the air to slam down fast. Dodge the boss's goo by jumping!</li>
         <li>Crushes fill the <b>SUPER BAR</b>. Then hit <b>SHIELD/CRUSH</b>: shield up and everything you touch is crushed.</li>
         <li><b>Object Selector</b> swaps planets: Mars is heavy, Earth balanced, Moon fast and slippery.</li>
+        <li>Earn up to <b class="y">3 STARS</b>: clear the level, finish with at least half your health, and beat the level's target score (combos and slams help).</li>
       </ul>
       <div class="howto-keys" id="howtoKeys">
         <span><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> / drag: spin</span>
@@ -228,6 +241,11 @@
       <div class="plate" id="resPlate"><span id="resTitle">LEVEL CLEAR!</span></div>
       <img id="resSplat" class="res-splat hidden" src="assets/sprites/astro_splat.png" alt="" data-fallback="">
       <div class="stars" id="resStars"><span>★</span><span>★</span><span>★</span></div>
+      <ul class="res-goals" id="resGoals">
+        <li id="goalClear">CLEAR THE LEVEL</li>
+        <li id="goalHealth">FINISH WITH 50%+ HEALTH</li>
+        <li id="goalScore">SCORE <span id="goalScoreVal">0</span></li>
+      </ul>
       <div class="res-stats">
         <div><span>SCORE</span><b id="resScore">0</b></div>
         <div><span>CRUSHES</span><b id="resCrushes">0</b></div>
@@ -239,7 +257,7 @@
       <div class="menu-buttons">
         <button class="btn btn-orange" data-action="next" id="resNext">NEXT LEVEL</button>
         <button class="btn btn-blue" data-action="retry">RETRY</button>
-        <button class="btn btn-red" data-action="quit">MENU</button>
+        <button class="btn btn-red" data-action="levels">LEVELS</button>
       </div>
     </div>
   </div>

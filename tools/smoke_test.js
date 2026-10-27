@@ -127,19 +127,34 @@ async function run(browser, base, label, viewport, touch) {
   await shot(page, label + '_01_menu');
   check(await game(page, () => CC.game.mode === 'attract'), 'menu shows the attract-mode planet');
 
-  for (const [btn, id] of [['LEVELS', 'levels'], ['SETTINGS', 'settings'], ['LEADERBOARD', 'leaderboard'], ['WEAPONS UPGRADES', 'weapons']]) {
-    await page.click(`#menu button:has-text("${btn}")`);
+  const stack = await page.$$eval('#menu .menu-buttons button', (bs) => bs.map((b) => b.textContent.trim()));
+  check(stack.join('|') === 'START GAME|WEAPONS UPGRADES|LEADERBOARD', 'menu buttons: ' + stack.join(', '));
+  for (const [sel, id, name] of [['#btnMenuSettings', 'settings', 'the ⚙ corner button'], ['#menu button:has-text("START GAME")', 'levels', 'START GAME'],
+    ['#menu button:has-text("LEADERBOARD")', 'leaderboard', 'LEADERBOARD'], ['#menu button:has-text("WEAPONS UPGRADES")', 'weapons', 'WEAPONS UPGRADES']]) {
+    await page.click(sel);
     await page.waitForSelector(`#${id}.show`);
     await wait(page, 250);
     await shot(page, `${label}_02_${id}`);
-    check(true, `${id} screen opens`);
-    if (id === 'levels') check(await page.locator('#levelList .level-tile').count() === 20, 'sector 1 shows 20 level tiles');
+    check(true, `${name} opens the ${id} screen`);
+    if (id === 'levels') {
+      const lv = await page.evaluate(() => ({
+        tiles: document.querySelectorAll('#levelList .level-tile').length,
+        next: [...document.querySelectorAll('#levelList .level-tile.next .num')].map((n) => n.textContent),
+        locked: document.querySelectorAll('#levelList .level-tile:disabled').length,
+        total: document.getElementById('starTotal').textContent
+      }));
+      check(lv.tiles === 20, 'sector 1 shows 20 level tiles');
+      check(lv.next.join() === '1' && lv.locked === 19, `level 1 is marked to play next, the rest are locked (next ${lv.next}, locked ${lv.locked})`);
+      check(lv.total === '★ 0 / 60', `level select shows the star total (${lv.total})`);
+    }
     await page.click(`#${id} [data-back]`);
     await page.waitForSelector('#menu.show');
   }
 
-  // First start shows how-to, then level 1
+  // First start: START GAME → pick level 1 → how-to → play
   await page.click('#menu button:has-text("START GAME")');
+  await page.waitForSelector('#levels.show');
+  await page.click('#levelList .level-tile.next');
   await page.waitForSelector('#howto.show');
   await shot(page, label + '_03_howto');
   await page.click('#howtoGo');
@@ -178,15 +193,38 @@ async function run(browser, base, label, viewport, touch) {
   await page.click('#pause button:has-text("RESUME")');
   check(await game(page, () => CC.game.state !== 'paused'), 'resume works');
 
-  // Win → results → leaderboard entry
-  await game(page, () => CC.game.win());
+  // Star rule: ★ clear, ★★ half health or more, ★★★ also the target score.
+  const rule = await game(page, () => {
+    const g = CC.game, t = g.level.target, keep = { health: g.health, score: g.score }, out = [];
+    for (const [health, score, won] of [[100, t, true], [80, t - 1, true], [30, t * 2, true], [100, t * 2, false]]) {
+      g.health = health; g.score = score; out.push(g.result(won).stars);
+    }
+    Object.assign(g, keep);
+    return out.join();
+  });
+  check(rule === '3,2,1,0', `stars: target + health 3, missed target 2, low health 1, loss 0 (${rule})`);
+  check(await page.isVisible('#target') && await page.textContent('#targetVal') === (await game(page, () => CC.game.level.target)).toLocaleString('en-US'), 'HUD shows the three-star target score');
+
+  // Win with the target reached → 3 stars → level map
+  await game(page, () => { CC.game.score = CC.game.level.target; CC.game.win(); });
   await page.waitForSelector('#results.show', { timeout: 6000 });
   await wait(page, 600);
   await shot(page, label + '_07_win');
+  check(await page.locator('#resStars span.on').count() === 3 && await page.locator('#resGoals li.done').count() === 3, 'a clean, high-scoring clear earns 3 stars with every goal ticked');
   check(await page.locator('input[type=text], input:not([type])').count() === 0, 'no text input (no names collected)');
   check(await page.isVisible('#resRank'), 'results show the run\'s place in your top runs');
   check(await game(page, () => CC.storage.data.leaderboard.length === 1 && CC.storage.data.unlocked >= 2), 'run recorded and level 2 unlocked');
-  await page.click('#results button:has-text("MENU")');
+  await page.click('#results button:has-text("LEVELS")');
+  await page.waitForSelector('#levels.show');
+  const map = await page.evaluate(() => ({
+    l1: document.querySelectorAll('#levelList .level-tile:nth-child(1) .st i.on').length,
+    next: [...document.querySelectorAll('#levelList .level-tile.next .num')].map((n) => n.textContent).join(),
+    total: document.getElementById('starTotal').textContent
+  }));
+  check(map.l1 === 3 && map.next === '2' && map.total === '★ 3 / 60', `level map shows the stars and moves on to level 2 (L1 ${map.l1}★, next ${map.next}, ${map.total})`);
+  await shot(page, label + '_07b_levels');
+  await page.click('#levels [data-back]');
+  await page.waitForSelector('#menu.show');
   await page.click('#menu button:has-text("LEADERBOARD")');
   await wait(page, 300);
   await shot(page, label + '_08_leaderboard');
@@ -200,6 +238,7 @@ async function run(browser, base, label, viewport, touch) {
   await wait(page, 400);
   await shot(page, label + '_09_lose');
   check(await page.textContent('#resTitle') === 'CRUSHED!', 'losing shows the CRUSHED! screen');
+  check(await page.isVisible('#resStars') && await page.locator('#resStars span.on').count() === 0, 'losing shows three empty stars');
 
   // Boss
   await page.goto(base + '/index.html?level=20&god=1&boss=1');
@@ -305,12 +344,14 @@ async function runYouTube(browser, base) {
   }
 
   // Esc closes a dialog
-  await page.click('#menu button:has-text("SETTINGS")');
+  await page.click('#btnMenuSettings');
   await page.keyboard.press('Escape');
   check(await page.isVisible('#menu.show'), 'Esc closes the settings screen');
 
   // Mouse-only play
   await page.click('#menu button:has-text("START GAME")');
+  await page.waitForSelector('#levels.show');
+  await page.click('#levelList .level-tile.next');
   await page.waitForSelector('#howto.show');
   await page.click('#howtoGo');
   await page.evaluate(() => { CC.game.flags.god = true; });
@@ -506,6 +547,22 @@ async function runViewports(browser, base) {
     await wait(page, 400);
     await shot(page, tag + '_menu');
     const menuScales = await sharpness(page);
+    const hit = (a, b) => a.x < b.r && b.x < a.r && a.y < b.b && b.y < a.b;
+    // Menu: everything on screen, and the ⚙ corner button clear of the logo and buttons.
+    const menu = await page.evaluate(() => {
+      const box = (el, sel) => { const r = el.getBoundingClientRect(); return { sel, x: r.left, y: r.top, r: r.right, b: r.bottom }; };
+      const logo = document.querySelector('#menu .logo, #menu h1');
+      const parts = [...document.querySelectorAll('#menu .menu-buttons button')].map((b) => box(b, b.textContent.trim()));
+      if (logo) parts.unshift(box(logo, 'logo'));
+      const spill = [...document.querySelectorAll('#menu .menu-buttons button')].filter((b) => b.scrollWidth > b.clientWidth + 1).map((b) => b.textContent.trim());
+      return { gear: box(document.getElementById('btnMenuSettings'), 'gear'), parts, spill, w: innerWidth, h: innerHeight };
+    });
+    const onScreen = (r) => r.x >= -0.5 && r.y >= -0.5 && r.r <= menu.w + 0.5 && r.b <= menu.h + 0.5;
+    const gearHits = menu.parts.filter((p) => hit(menu.gear, p)).map((p) => p.sel);
+    const cut = [menu.gear, ...menu.parts].filter((r) => !onScreen(r)).map((r) => r.sel);
+    check(gearHits.length === 0 && cut.length === 0 && menu.spill.length === 0, `${w}x${h}: menu fits and the settings gear is clear of the logo and buttons` +
+      (gearHits.length ? ' (gear hits ' + gearHits.join(', ') + ')' : '') + (cut.length ? ' (off screen: ' + cut.join(', ') + ')' : '') +
+      (menu.spill.length ? ' (text spills out of: ' + menu.spill.join(', ') + ')' : ''));
     await page.evaluate(() => { CC.storage.data.seenHowTo = true; CC.ui.startLevel(10); CC.game.flags.god = true; });
     await wait(page, 2200);
     await page.evaluate(() => { CC.game.superCharge = 100; });
@@ -513,12 +570,11 @@ async function runViewports(browser, base) {
     const layout = await page.evaluate(() => {
       const g = CC.game;
       const rect = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { sel, x: r.left, y: r.top, r: r.right, b: r.bottom }; };
-      const blocks = ['.hud-tl', '.hud-tr', '#selector', '.hud-bl', '.hud-br'].map(rect).filter((r) => r.r > r.x);
+      const blocks = ['.hud-tl', '.hud-tr', '#selector', '.hud-bl', '.hud-br', '#keyHint'].map(rect).filter((r) => r.r > r.x);
       const ah = g.R * CC.config.astronaut.height;
       const astro = { sel: 'astronaut', x: g.cx - ah * 0.35, y: g.cy - g.R - ah, r: g.cx + ah * 0.35, b: g.cy - g.R };
       return { blocks, astro, w: innerWidth, h: innerHeight, canvasW: g.canvas.clientWidth, canvasH: g.canvas.clientHeight };
     });
-    const hit = (a, b) => a.x < b.r && b.x < a.r && a.y < b.b && b.y < a.b;
     const clashes = [];
     for (let i = 0; i < layout.blocks.length; i++) {
       for (let j = i + 1; j < layout.blocks.length; j++) if (hit(layout.blocks[i], layout.blocks[j])) clashes.push(layout.blocks[i].sel + '/' + layout.blocks[j].sel);
