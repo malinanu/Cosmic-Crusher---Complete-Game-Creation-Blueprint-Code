@@ -39,6 +39,29 @@ jobs:
           name: test-screenshots
           path: tools/out/
 
+  browsers:
+    # YouTube supports Chrome, Edge, Firefox and its iOS app (WebKit).
+    name: YouTube checks on ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install pillow==12.3.0
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - run: node tools/smoke_test.js --browser=${{ matrix.browser }} --only=youtube
+
   android:
     name: Android app
     runs-on: ubuntu-latest

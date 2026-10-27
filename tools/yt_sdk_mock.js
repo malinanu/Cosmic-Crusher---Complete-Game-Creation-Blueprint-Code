@@ -6,7 +6,8 @@
   'use strict';
   var log = window.__yt = {
     calls: [], saves: [], scores: [], saved: '', loaded: false, saveBeforeLoad: false,
-    menuShownAtGameReady: null, loadingShownAtFirstFrame: null, audio: true,
+    menuShownAtGameReady: null, loadingShownAtFirstFrame: null,
+    audio: window.__ytAudioStart !== false,
     pauseFns: [], resumeFns: [], audioFns: []
   };
   function rec(name) { log.calls.push(name); }

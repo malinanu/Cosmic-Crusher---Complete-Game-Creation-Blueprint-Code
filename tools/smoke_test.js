@@ -12,14 +12,20 @@
 // Screenshots go to tools/out/. Exits non-zero if any check fails.
 //
 //   npm install --no-save playwright   (once, if Playwright isn't installed)
-//   node tools/smoke_test.js
+//   node tools/smoke_test.js [--browser=chromium|firefox|webkit] [--only=youtube]
+// --only=youtube runs just the YouTube build sections (used for the extra
+// browsers in CI).
 'use strict';
 
 const http = require('http');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+const playwright = require('playwright');
+
+const ARGS = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
+const ENGINE = ARGS.browser || 'chromium';
+const ONLY = ARGS.only || 'all';
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(__dirname, 'out');
@@ -29,9 +35,12 @@ const TYPES = {
 };
 const SDK_URL = 'https://www.youtube.com/game_api/v1';
 // Mirrors the policy in YouTube's Playables test-suite guide.
+// Scripts: like YouTube's live policy, only nonce-tagged or same-origin files
+// run, so inline code (onerror="...", <script>...</script>) would be refused.
+const NONCE = 'cosmic-test-nonce';
 const YT_CSP = [
   "default-src 'none'",
-  "script-src 'report-sample' 'self' 'unsafe-inline' 'unsafe-eval' blob: https://www.youtube.com/game_api/v0 https://www.youtube.com/game_api/v1",
+  "script-src 'report-sample' 'self' 'nonce-" + NONCE + "' 'unsafe-eval' blob: https://www.youtube.com/game_api/v0 https://www.youtube.com/game_api/v1",
   "object-src 'none'",
   "style-src 'report-sample' 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' blob: data:",
@@ -52,7 +61,13 @@ function serve(dir, headers) {
       res.writeHead(404); res.end(); return;
     }
     const h = { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' };
-    if (headers && file.endsWith('.html')) Object.assign(h, headers);
+    if (headers && file.endsWith('.html')) {
+      Object.assign(h, headers);
+      // Tag script elements with the nonce, as YouTube's server does.
+      res.writeHead(200, h);
+      res.end(fs.readFileSync(file, 'utf8').replace(/<script /g, '<script nonce="' + NONCE + '" '));
+      return;
+    }
     res.writeHead(200, h);
     fs.createReadStream(file).pipe(res);
   });
@@ -70,8 +85,9 @@ function watchErrors(page, strict) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {
-    if (m.type() !== 'error') return;
     const t = m.text();
+    // Content-security-policy refusals are reported as warnings by some engines.
+    if (m.type() !== 'error' && !/Content.Security.Policy|Refused to/i.test(t)) return;
     // The development copy probes for optional sprites that may not exist.
     if (!strict && (t.includes('404') || t.includes('ERR_FILE_NOT_FOUND'))) return;
     errors.push(t);
@@ -100,7 +116,7 @@ async function spin(page, ms, key) {
 
 async function run(browser, base, label, viewport, touch) {
   console.log(`\n[${label}] ${viewport.width}x${viewport.height}`);
-  const ctx = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: touch ? 2 : 1 });
+  const ctx = await browser.newContext(contextOptions(viewport, touch));
   const page = await ctx.newPage();
   const errors = watchErrors(page);
 
@@ -201,8 +217,16 @@ async function run(browser, base, label, viewport, touch) {
 
 // ---- YouTube Playables build ------------------------------------------------------
 
-async function ytPage(browser, base, viewport, touch) {
-  const ctx = await browser.newContext({ viewport, hasTouch: !!touch, isMobile: !!touch, deviceScaleFactor: touch ? 3 : 1 });
+// Phones at 3x, everything else at 2x: the densities the art must stay sharp at.
+function contextOptions(viewport, touch) {
+  const o = { viewport, hasTouch: !!touch, deviceScaleFactor: touch ? 3 : 2 };
+  if (ENGINE !== 'firefox') o.isMobile = !!touch;   // Firefox has no mobile emulation
+  return o;
+}
+
+async function ytPage(browser, base, viewport, touch, init) {
+  const ctx = await browser.newContext(contextOptions(viewport, touch));
+  if (init) await ctx.addInitScript(init.fn, init.arg);
   const page = await ctx.newPage();
   const errors = watchErrors(page, true);
   const external = [];
@@ -215,9 +239,32 @@ async function ytPage(browser, base, viewport, touch) {
     return route.abort();
   });
   await page.goto(base + '/index.html');
+  if (init && init.noWait) return { ctx, page, errors, external };
   await page.waitForSelector('#menu.show', { timeout: 10000 });
   await page.waitForFunction(() => window.__yt && window.__yt.calls.includes('gameReady'), null, { timeout: 5000 });
   return { ctx, page, errors, external };
+}
+
+// Device pixels drawn per image pixel, for canvas sprites (tracked while
+// drawing) and visible <img> elements. Above ~1.15 the art looks soft.
+async function sharpness(page) {
+  return page.evaluate(() => {
+    const out = Object.assign({}, CC.assets.upscale.max);
+    const c = CC.game.canvas;
+    out.canvas = c.clientWidth * devicePixelRatio / c.width;
+    document.querySelectorAll('img').forEach((img) => {
+      const r = img.getBoundingClientRect();
+      if (!r.width || !img.naturalWidth || !img.offsetParent) return;
+      const k = r.width * devicePixelRatio / img.naturalWidth;
+      const key = 'img:' + img.src.split('/').pop();
+      out[key] = Math.max(out[key] || 0, k);
+    });
+    return out;
+  });
+}
+
+function blurry(scales) {
+  return Object.entries(scales).filter(([, k]) => k > 1.15).map(([key, k]) => `${key} ${k.toFixed(2)}x`);
 }
 
 const yt = (page) => page.evaluate(() => ({
@@ -248,6 +295,14 @@ async function runYouTube(browser, base) {
   check(await page.evaluate(() => getComputedStyle(document.getElementById('btnSound')).display === 'none'), 'no in-game mute button');
   check(await page.evaluate(() => document.querySelector('.style-btn[data-controls="tilt"]').classList.contains('hidden')), 'tilt (motion permission) option hidden');
   check(await page.locator('input[type=text], input:not([type])').count() === 0, 'no text entry anywhere');
+  if (ENGINE === 'chromium') {
+    // Launched with autoplay allowed, as inside YouTube: sound must start
+    // without waiting for a tap.
+    check(await page.evaluate(() => CC.audio.state === 'running'), 'audio starts without waiting for a tap (' + await page.evaluate(() => CC.audio.state) + ')');
+  } else {
+    // Headless Firefox/WebKit have no audio device, so no AudioContext ever runs.
+    console.log('  note audio autostart is checked on chromium only (no audio device in headless ' + ENGINE + ')');
+  }
 
   // Esc closes a dialog
   await page.click('#menu button:has-text("SETTINGS")');
@@ -270,6 +325,8 @@ async function runYouTube(browser, base) {
   await shot(page, 'youtube_01_play');
 
   // Host pause: everything stops, progress saved
+  await page.evaluate(() => { CC.game.superCharge = 100; });
+  await wait(page, 200);
   const before = await yt(page);
   const t0 = await page.evaluate(() => { __yt.pause(); return CC.game.t; });
   await wait(page, 600);
@@ -277,14 +334,16 @@ async function runYouTube(browser, base) {
   check(paused.t === t0 && !paused.running, 'onPause stops the game loop and rendering');
   check(paused.audio !== 'running', 'onPause suspends audio (' + paused.audio + ')');
   check(paused.screen, 'onPause leaves the level on the pause screen');
+  check(await page.evaluate(() => getComputedStyle(document.getElementById('btnSuper')).animationPlayState === 'paused'), 'onPause freezes CSS animations too');
   check((await yt(page)).saves > before.saves, 'onPause saves progress');
   await page.evaluate(() => __yt.resume());
   await wait(page, 300);
   check(await page.evaluate(() => CC.loop.running && !!document.querySelector('#pause.show')), 'onResume restarts the loop and waits on the pause screen');
   await page.click('#pause button:has-text("RESUME")');
   const t1 = await page.evaluate(() => CC.game.t);
-  await wait(page, 300);
-  check(await page.evaluate((t) => CC.game.t > t, t1), 'game runs again after RESUME');
+  await wait(page, 400);
+  const after = await page.evaluate(() => ({ t: CC.game.t, state: CC.game.state, running: CC.loop.running, screens: [...document.querySelectorAll('.screen.show')].map((s) => s.id).join(',') }));
+  check(after.t > t1, `game runs again after RESUME (t ${t1} -> ${after.t}, ${after.state}, loop ${after.running}, screens [${after.screens}])`);
 
   // YouTube audio setting
   await page.evaluate(() => __yt.setAudio(false));
@@ -347,7 +406,7 @@ function capacitorBridge() {
 
 async function runCapacitor(browser, base) {
   console.log('\n[mobile] dist/mobile with a stand-in Capacitor bridge');
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 });
+  const ctx = await browser.newContext(contextOptions({ width: 390, height: 844 }, true));
   await ctx.addInitScript(capacitorBridge);
   const page = await ctx.newPage();
   const errors = watchErrors(page, true);
@@ -389,11 +448,45 @@ async function runCapacitor(browser, base) {
   await ctx.close();
 }
 
+// Starts the way YouTube does on Android: a 1x1 hidden view where
+// requestAnimationFrame doesn't run. The game must still load and report ready.
+function freezeFrames() {
+  const real = window.requestAnimationFrame.bind(window);
+  let queue = [];
+  window.__frozen = true;
+  window.requestAnimationFrame = (cb) => { if (window.__frozen) { queue.push(cb); return 0; } return real(cb); };
+  window.__unfreeze = () => { window.__frozen = false; const q = queue; queue = []; q.forEach((cb) => real(cb)); };
+}
+
+async function runHiddenBoot(browser, base) {
+  console.log('\n[youtube] hidden start (1x1 view, no animation frames) and audio off');
+  const { ctx, page, errors } = await ytPage(browser, base, { width: 1, height: 1 }, true, { fn: freezeFrames, noWait: true });
+  await page.waitForFunction(() => window.__yt && window.__yt.calls.includes('gameReady'), null, { timeout: 8000 }).catch(() => {});
+  const calls = await page.evaluate(() => __yt.calls.slice());
+  check(['firstFrameReady', 'loadData', 'gameReady'].every((c) => calls.includes(c)), 'ready signals are sent while hidden: ' + calls.filter((c) => /Ready|loadData/.test(c)).join(', '));
+  await page.evaluate(() => window.__unfreeze());
+  await page.setViewportSize({ width: 390, height: 844 });
+  await wait(page, 500);
+  const lay = await page.evaluate(() => ({ w: CC.game.w, h: CC.game.h, R: CC.game.R, menu: !!document.querySelector('#menu.show'), running: CC.loop.running }));
+  check(lay.w === 390 && lay.h === 844 && lay.R > 100 && lay.menu && lay.running, `lays out properly once shown (${lay.w}x${lay.h}, R=${Math.round(lay.R)})`);
+  await shot(page, 'youtube_hidden_boot');
+  check(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
+  await ctx.close();
+
+  const off = await ytPage(browser, base, { width: 390, height: 844 }, true, { fn: () => { window.__ytAudioStart = false; } });
+  await wait(off.page, 300);
+  const a = await off.page.evaluate(() => ({ state: CC.audio.state, gain: CC.audio.masterGain }));
+  check(a.gain === 0 && a.state !== 'running', `YouTube audio off at start: silent (${a.state}, gain ${a.gain})`);
+  await off.ctx.close();
+}
+
 // ---- Aspect ratios --------------------------------------------------------------------
 
+// Covers YouTube's listed ratios 9:32, 9:21, 9:16, 3:4, 1:1, 4:3, 16:9, 21:9, 32:9.
 const VIEWPORTS = [
-  [360, 640, true], [390, 844, true], [768, 1024, true], [1024, 768, true],
-  [1280, 720, false], [640, 360, true], [600, 600, false], [1050, 450, false]
+  [320, 1138, true], [360, 840, true], [360, 640, true], [320, 568, true], [390, 844, true],
+  [768, 1024, true], [600, 600, false], [1024, 768, true], [1280, 720, false], [640, 360, true],
+  [1920, 823, false], [1050, 450, false], [1280, 360, false]
 ];
 
 async function runViewports(browser, base) {
@@ -401,8 +494,10 @@ async function runViewports(browser, base) {
   for (const [w, h, touch] of VIEWPORTS) {
     const { ctx, page, errors } = await ytPage(browser, base, { width: w, height: h }, touch);
     const tag = `vp_${w}x${h}`;
+    await page.evaluate(() => { CC.assets.upscale.on = true; });
     await wait(page, 400);
     await shot(page, tag + '_menu');
+    const menuScales = await sharpness(page);
     await page.evaluate(() => { CC.storage.data.seenHowTo = true; CC.ui.startLevel(10); CC.game.flags.god = true; });
     await wait(page, 2200);
     await page.evaluate(() => { CC.game.superCharge = 100; });
@@ -422,6 +517,8 @@ async function runViewports(browser, base) {
       if (hit(layout.blocks[i], layout.astro)) clashes.push(layout.blocks[i].sel + '/astronaut');
     }
     check(layout.canvasW === layout.w && layout.canvasH === layout.h, `${w}x${h}: playfield fills the viewport`);
+    const soft = blurry(Object.assign(menuScales, await sharpness(page)));
+    check(soft.length === 0, `${w}x${h}: art is drawn at or below its pixel size` + (soft.length ? ' (soft: ' + soft.join(', ') + ')' : ''));
     check(clashes.length === 0, `${w}x${h}: HUD blocks and astronaut don't overlap` + (clashes.length ? ' (' + clashes.join(', ') + ')' : ''));
     if (w === 390) {
       const s0 = await page.evaluate(() => ({ level: CC.game.level.level, score: CC.game.score, t: CC.game.t }));
@@ -446,8 +543,21 @@ async function runViewports(browser, base) {
   const mobileServer = await serve(path.join(ROOT, 'dist', 'mobile'));
   const base = 'http://127.0.0.1:' + dev.address().port;
   const ytBase = 'http://127.0.0.1:' + ytServer.address().port;
-  const browser = await chromium.launch();
+  // Allow sound without a gesture, as YouTube does when it focuses a Playable.
+  const launch = {
+    chromium: { args: ['--autoplay-policy=no-user-gesture-required'] },
+    firefox: { firefoxUserPrefs: { 'media.autoplay.default': 0, 'media.autoplay.blocking_policy': 0, 'media.autoplay.block-webaudio': false } },
+    webkit: {}
+  }[ENGINE];
+  console.log(`engine: ${ENGINE}${ONLY !== 'all' ? ', sections: ' + ONLY : ''}`);
+  const browser = await playwright[ENGINE].launch(launch);
   try {
+    if (ONLY === 'youtube') {
+      await runYouTube(browser, ytBase);
+      await runHiddenBoot(browser, ytBase);
+      await runViewports(browser, ytBase);
+      return;
+    }
     await run(browser, base, 'phone', { width: 390, height: 844 }, true);
     await run(browser, base, 'desktop', { width: 1280, height: 800 }, false);
 
@@ -461,6 +571,7 @@ async function runViewports(browser, base) {
     await page.close();
 
     await runYouTube(browser, ytBase);
+    await runHiddenBoot(browser, ytBase);
     await runViewports(browser, ytBase);
     await runCapacitor(browser, 'http://127.0.0.1:' + mobileServer.address().port);
   } finally {
@@ -468,7 +579,7 @@ async function runViewports(browser, base) {
     dev.close();
     ytServer.close();
     mobileServer.close();
+    console.log(failures.length ? `\n${failures.length} check(s) failed` : '\nall checks passed');
+    process.exit(failures.length ? 1 : 0);
   }
-  console.log(failures.length ? `\n${failures.length} check(s) failed` : '\nall checks passed');
-  process.exit(failures.length ? 1 : 0);
 })();
