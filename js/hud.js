@@ -39,12 +39,17 @@
     svg('circle', { cx: GX, cy: GY, r: 9, class: 'g-hub' }, g);
   }
 
+  // Planet thumbnails, drawn at the screen's pixel density so they stay sharp.
   function drawSelector() {
     var btns = document.querySelectorAll('#selector button');
+    var dpr = Math.min(3, window.devicePixelRatio || 1);
     btns.forEach(function (b) {
       var c = b.querySelector('canvas');
+      var size = Math.round(46 * dpr);
+      if (c.width !== size) { c.width = size; c.height = size; }
       var ctx = c.getContext('2d');
-      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.setTransform(size / 96, 0, 0, size / 96, 0, 0);
+      ctx.clearRect(0, 0, 96, 96);
       var key = b.getAttribute('data-planet');
       CC.render.drawPlanet(ctx, key, 48, 48, 34, 0.3, CC.config.planets[key].glow);
     });
@@ -68,6 +73,7 @@
     el.selector = document.querySelectorAll('#selector button');
     buildGauge();
     drawSelector();
+    window.addEventListener('resize', drawSelector);
   }
 
   function set(key, value, fn) {

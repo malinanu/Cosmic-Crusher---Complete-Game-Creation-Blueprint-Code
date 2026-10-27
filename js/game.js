@@ -40,10 +40,16 @@
 
   Game.prototype.resize = function () {
     var w = window.innerWidth, h = window.innerHeight;
+    // A hidden WebView reports 0×0 at first: keep the last good layout and
+    // lay out again on the next resize.
+    if (!w || !h) {
+      if (this.w) return;
+      w = w || 1; h = h || 1;
+    }
     // Full device resolution (up to 3×) so text and sprites stay sharp,
     // within a pixel budget that keeps big tablets and monitors fast.
     var dpr = Math.min(3, window.devicePixelRatio || 1);
-    var budget = 4.5e6;
+    var budget = 9.5e6;   // covers 1080p at 2x and 12.9" tablets
     if (w * h * dpr * dpr > budget) dpr = Math.max(1, Math.sqrt(budget / (w * h)));
     this.w = w; this.h = h; this.dpr = dpr;
     this.canvas.width = Math.round(w * dpr);

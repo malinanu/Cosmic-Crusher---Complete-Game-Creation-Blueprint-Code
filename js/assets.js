@@ -48,9 +48,19 @@
 
   // Draw a sprite with its bottom-centre at (0, 0) in the current transform,
   // scaled so its height is h. Returns false when the sprite is missing.
+  // Largest on-screen upscale seen per sprite (device px drawn ÷ image px).
+  // Tests switch this on to check YouTube's "no blurry graphics" rule.
+  var upscale = { on: false, max: {} };
+  function track(ctx, key, img, h) {
+    var m = ctx.getTransform();
+    var k = h * Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d)) / img.height;
+    if (!(upscale.max[key] >= k)) upscale.max[key] = k;
+  }
+
   function drawFeet(ctx, key, h, flip) {
     var img = images[key];
     if (!img) return false;
+    if (upscale.on) track(ctx, key, img, h);
     var w = h * img.width / img.height;
     ctx.save();
     if (flip) ctx.scale(-1, 1);
@@ -64,6 +74,7 @@
     var img = images[key];
     if (!img) return false;
     var h = w * img.height / img.width;
+    if (upscale.on) track(ctx, key, img, h);
     ctx.save();
     if (flip) ctx.scale(-1, 1);
     ctx.drawImage(img, -w / 2, -h / 2, w, h);
@@ -189,6 +200,7 @@
   }
 
   CC.assets = {
+    upscale: upscale,
     keys: KEYS,
     url: url,
     load: load,

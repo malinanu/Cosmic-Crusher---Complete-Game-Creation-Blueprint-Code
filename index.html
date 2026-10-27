@@ -54,7 +54,7 @@
       </div>
     </div>
 
-    <div id="selector" class="selector">
+    <div id="selector" class="selector" role="group" aria-label="Choose planet">
       <div class="selector-label">OBJECT SELECTOR</div>
       <div class="selector-row">
         <button data-planet="mars" aria-label="Mars"><canvas width="96" height="96"></canvas></button>
@@ -77,19 +77,19 @@
         <span class="dp-hub"></span>
       </div>
       <div class="gauge">
-        <svg id="gauge" viewBox="0 0 200 118" aria-hidden="true"></svg>
+        <svg id="gauge" viewBox="0 0 200 118" role="img" aria-label="Roll speed gauge"></svg>
         <div class="gauge-label">ROLL SPEED</div>
       </div>
     </div>
 
     <div class="hud-br">
       <button id="btnBoost" class="act-btn" aria-label="Boost or slam">
-        <span class="act-icon"><img src="assets/sprites/icon_boost.png" alt="" onerror="this.replaceWith(document.createTextNode('🚀'))"></span>
+        <span class="act-icon"><img src="assets/sprites/icon_boost.png" alt="" data-fallback="🚀"></span>
         <span class="cooldown" id="boostCd"></span>
         <span class="act-label">BOOST/SLAM</span>
       </button>
       <button id="btnSuper" class="act-btn" aria-label="Shield and super crush">
-        <span class="act-icon"><img src="assets/sprites/icon_shield.png" alt="" onerror="this.replaceWith(document.createTextNode('🛡'))"></span>
+        <span class="act-icon"><img src="assets/sprites/icon_shield.png" alt="" data-fallback="🛡"></span>
         <span class="cooldown" id="superCd"></span>
         <span class="act-label">SHIELD/CRUSH</span>
       </button>
@@ -109,7 +109,7 @@
 
   <div id="menu" class="screen">
     <div class="menu-col">
-      <img class="logo" src="assets/sprites/logo.png" alt="Cosmic Crusher" onerror="this.outerHTML='<h1 class=&quot;title-text big&quot;>COSMIC<br>CRUSHER</h1>'">
+      <img class="logo" src="assets/sprites/logo.png" alt="Cosmic Crusher" data-fallback="logo">
       <div class="menu-spacer"></div>
       <div class="menu-buttons">
         <button class="btn btn-orange btn-big" data-action="start">START GAME</button>
@@ -174,7 +174,7 @@
       <div class="tabs"><span class="tab active">YOUR TOP RUNS</span></div>
       <div class="lb-title">
         <span>TOP COSMIC<br>CRUSHERS</span>
-        <img src="assets/sprites/icon_trophy.png" alt="" onerror="this.remove()">
+        <img src="assets/sprites/icon_trophy.png" alt="" data-fallback="">
       </div>
       <ol id="lbList" class="lb-list"></ol>
       <div class="lb-rank"><div>YOUR BEST:</div><div id="lbRank" class="rank">—</div></div>
@@ -226,7 +226,7 @@
   <div id="results" class="screen dim">
     <div class="panel narrow">
       <div class="plate" id="resPlate"><span id="resTitle">LEVEL CLEAR!</span></div>
-      <img id="resSplat" class="res-splat hidden" src="assets/sprites/astro_splat.png" alt="" onerror="this.remove()">
+      <img id="resSplat" class="res-splat hidden" src="assets/sprites/astro_splat.png" alt="" data-fallback="">
       <div class="stars" id="resStars"><span>★</span><span>★</span><span>★</span></div>
       <div class="res-stats">
         <div><span>SCORE</span><b id="resScore">0</b></div>

@@ -19,9 +19,15 @@
     return out;
   }
 
-  function nextPaint() {
+  // Resolves after the next paint, or after `ms` if nothing paints: YouTube
+  // starts Playables in a hidden view where requestAnimationFrame may never
+  // fire, and the game must still report ready.
+  function paintOrTimeout(ms) {
     return new Promise(function (resolve) {
-      requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+      var done = false;
+      function finish() { if (!done) { done = true; resolve(); } }
+      requestAnimationFrame(function () { requestAnimationFrame(finish); });
+      setTimeout(finish, ms);
     });
   }
 
@@ -69,8 +75,8 @@
     ]).catch(function () {}) : Promise.resolve();
     var timeout = new Promise(function (r) { setTimeout(r, 2500); });
 
-    // The loading screen is on screen once it has painted.
-    nextPaint().then(function () {
+    // The loading screen is up (it is in the HTML from the start).
+    paintOrTimeout(50).then(function () {
       P.firstFrameReady();
       return Promise.all([
         P.init().then(function () { return CC.storage.load(); }),
@@ -82,6 +88,10 @@
       CC.ui.init(game, { touch: touch });
       CC.audio.setSystemAllowed(P.audioAllowed());
       P.onAudioChange(function (on) { CC.audio.setSystemAllowed(on); });
+      // Start sound straight away where the host allows it (YouTube may hand
+      // the game focus without a tap). Browsers that still need a gesture
+      // get it from unlock() on the first tap or key press.
+      if (P.audioAllowed()) CC.audio.unlock();
       if (q.level) {
         CC.storage.data.seenHowTo = true;
         CC.ui.startLevel(parseInt(q.level, 10) || 1);
@@ -90,7 +100,7 @@
       }
       loop.start();
       // Interactive from here (main menu or a level).
-      return nextPaint().then(P.gameReady);
+      return paintOrTimeout(50).then(P.gameReady);
     }).catch(function (err) {
       P.logError(err);
     });
@@ -101,6 +111,7 @@
     // Host pause (YouTube onPause, app in background, browser tab hidden):
     // stop everything and save; on resume wait in the pause screen.
     P.onPause(function () {
+      document.body.classList.add('host-paused');
       CC.ui.systemPause();
       loop.stop();
       CC.input.setEnabled(false);
@@ -108,6 +119,7 @@
       CC.storage.flush();
     });
     P.onResume(function () {
+      document.body.classList.remove('host-paused');
       CC.audio.resume();
       loop.start();
     });

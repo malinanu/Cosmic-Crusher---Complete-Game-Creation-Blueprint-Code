@@ -9,10 +9,14 @@
   var vol = { music: 0.7, sfx: 0.9, muted: false, system: true, paused: false };
   var lastPlayed = {};
 
+  function quiet(p) { if (p && p.catch) p.catch(function () {}); }
+
   function ensure() {
     if (ac) return ac;
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
+    // iOS: let the silent switch and volume buttons control game sound.
+    try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) { /* unsupported */ }
     ac = new AC();
     master = ac.createGain();
     master.connect(ac.destination);
@@ -24,6 +28,12 @@
     var d = noiseBuf.getChannelData(0);
     for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     applyVolumes();
+    // Some engines start the context asynchronously: keep it suspended while
+    // the host disallows sound, whenever it reports running.
+    ac.onstatechange = function () {
+      if ((!vol.system || vol.paused) && ac.state === 'running') quiet(ac.suspend());
+    };
+    if ((!vol.system || vol.paused) && ac.state === 'running') quiet(ac.suspend());
     return ac;
   }
 
@@ -32,7 +42,7 @@
 
   function unlock() {
     if (!ensure()) return;
-    if (ac.state === 'suspended' && !vol.paused) ac.resume();
+    if (ac.state === 'suspended' && !vol.paused && vol.system) quiet(ac.resume());
   }
 
   function applyVolumes() {
@@ -44,7 +54,14 @@
 
   function setVolumes(music, sfx) { vol.music = music; vol.sfx = sfx; applyVolumes(); }
   function setMuted(m) { vol.muted = m; applyVolumes(); }
-  function setSystemAllowed(on) { vol.system = !!on; applyVolumes(); }
+  // The host's audio setting (YouTube mute): off means no output at all.
+  function setSystemAllowed(on) {
+    vol.system = !!on;
+    applyVolumes();
+    if (!ac) return;
+    if (!vol.system && ac.state === 'running') quiet(ac.suspend());
+    else if (vol.system && !vol.paused && ac.state === 'suspended') quiet(ac.resume());
+  }
 
   // Host pause: stop the music clock and the audio hardware entirely.
   function suspend() {
@@ -52,13 +69,13 @@
     if (music.timer) clearInterval(music.timer);
     music.timer = null;
     applyVolumes();
-    if (ac && ac.state === 'running') ac.suspend();
+    if (ac && ac.state === 'running') quiet(ac.suspend());
   }
 
   function resume() {
     vol.paused = false;
     applyVolumes();
-    if (ac && ac.state === 'suspended') ac.resume();
+    if (ac && ac.state === 'suspended' && vol.system) quiet(ac.resume());
     if (music.song && !music.timer) runMusic();
   }
 

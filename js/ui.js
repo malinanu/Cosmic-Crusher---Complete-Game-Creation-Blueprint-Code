@@ -350,9 +350,33 @@
     game.on('lose', onResult);
   }
 
+  // Images that fail to load are replaced by text (data-fallback) or removed.
+  // Done here rather than with inline onerror="" so YouTube's script policy,
+  // which only allows nonce-tagged scripts, has nothing to block.
+  function bindImageFallbacks() {
+    document.querySelectorAll('img[data-fallback]').forEach(function (img) {
+      function swap() {
+        var fb = img.getAttribute('data-fallback');
+        if (fb === 'logo') {
+          var h = document.createElement('h1');
+          h.className = 'title-text big';
+          h.innerHTML = 'COSMIC<br>CRUSHER';
+          img.replaceWith(h);
+        } else if (fb) {
+          img.replaceWith(document.createTextNode(fb));
+        } else {
+          img.remove();
+        }
+      }
+      if (img.complete && img.naturalWidth === 0) swap();
+      else img.addEventListener('error', swap);
+    });
+  }
+
   function init(g, opts) {
     game = g;
     touch = !!opts.touch;
+    bindImageFallbacks();
 
     document.querySelectorAll('[data-go]').forEach(function (b) {
       b.addEventListener('click', function () { CC.audio.play('ui'); show(b.getAttribute('data-go')); });

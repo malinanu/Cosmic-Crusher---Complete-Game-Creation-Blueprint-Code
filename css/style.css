@@ -350,10 +350,10 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 
 .hud-tl { position: absolute; top: calc(10px + var(--safe-t)); left: calc(12px + var(--safe-l)); display: flex; flex-direction: column; gap: 4px; }
 .health { display: flex; align-items: center; }
-.heart { width: 44px; height: 40px; position: relative; z-index: 2; filter: drop-shadow(0 0 6px rgba(255, 80, 80, 0.7)); }
+.heart { width: clamp(34px, 11vw, 44px); height: auto; aspect-ratio: 64 / 56; position: relative; z-index: 2; filter: drop-shadow(0 0 6px rgba(255, 80, 80, 0.7)); }
 .bar { position: relative; height: 22px; border-radius: 12px; overflow: hidden; background: rgba(10, 18, 48, 0.85); }
 .bar .fill { height: 100%; width: 0; transition: width 0.15s; border-radius: inherit; }
-.bar.hp { width: clamp(120px, 34vw, 230px); margin-left: -14px; border: 2px solid #57e3ff; box-shadow: 0 0 10px rgba(87, 227, 255, 0.8), inset 0 0 6px rgba(87, 227, 255, 0.4); }
+.bar.hp { width: clamp(84px, 34vw, 230px); margin-left: -14px; border: 2px solid #57e3ff; box-shadow: 0 0 10px rgba(87, 227, 255, 0.8), inset 0 0 6px rgba(87, 227, 255, 0.4); }
 .bar.hp .fill { background: linear-gradient(180deg, #ff8080, #e0202e 60%, #b0101e); margin-left: 12px; }
 .bar.hp.low { animation: lowhp 0.5s infinite alternate; }
 @keyframes lowhp { to { box-shadow: 0 0 16px rgba(255, 60, 60, 1); border-color: #ff6060; } }
@@ -368,7 +368,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 
 .hud-tr { position: absolute; top: calc(10px + var(--safe-t)); right: calc(12px + var(--safe-r)); display: flex; gap: 8px; align-items: flex-start; }
 .super-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.bar.super { width: clamp(110px, 30vw, 210px); border: 2px solid #ffb347; box-shadow: 0 0 10px rgba(255, 150, 40, 0.85), inset 0 0 6px rgba(255, 150, 40, 0.4); }
+.bar.super { width: clamp(80px, 30vw, 210px); border: 2px solid #ffb347; box-shadow: 0 0 10px rgba(255, 150, 40, 0.85), inset 0 0 6px rgba(255, 150, 40, 0.4); }
 .bar.super .fill { background: linear-gradient(180deg, #ffe066, #ff9a1a 55%, #ff6a00); }
 .bar.super.ready { animation: ready 0.45s infinite alternate; }
 .bar.super.active .fill { background: linear-gradient(180deg, #b8fbff, #41d8ff 55%, #1a8fff); }
@@ -411,7 +411,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .bar.boss .fill { background: linear-gradient(180deg, #ff7070, #c0101e); }
 
 .hud-bl { position: absolute; left: calc(10px + var(--safe-l)); bottom: calc(8px + var(--safe-b)); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.gauge { width: clamp(130px, 36vw, 190px); text-align: center; }
+.gauge { width: clamp(104px, min(36vw, 22vh), 190px); text-align: center; }
 .gauge svg { width: 100%; display: block; overflow: visible; }
 .gauge-label { font-size: clamp(12px, 3.4vw, 16px); color: #bff3ff; text-shadow: 0 0 8px rgba(65, 216, 255, 0.85); margin-top: -2px; }
 .g-back { fill: none; stroke: rgba(10, 20, 50, 0.85); stroke-width: 30; }
@@ -425,7 +425,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .g-hub { fill: #2a4a7a; stroke: #bff3ff; stroke-width: 3; }
 .gauge svg { filter: drop-shadow(0 0 6px rgba(65, 216, 255, 0.5)); }
 
-.dpad { position: relative; width: clamp(130px, 38vw, 170px); aspect-ratio: 1; display: block; border-radius: 50%; border: 2px solid rgba(120, 190, 255, 0.45); background: radial-gradient(circle, rgba(40, 80, 140, 0.4), rgba(10, 24, 60, 0.35)); }
+.dpad { position: relative; width: clamp(104px, min(38vw, 22vh), 170px); aspect-ratio: 1; display: block; border-radius: 50%; border: 2px solid rgba(120, 190, 255, 0.45); background: radial-gradient(circle, rgba(40, 80, 140, 0.4), rgba(10, 24, 60, 0.35)); }
 #hud.tilt-mode .dpad { opacity: 0.6; }
 /* YouTube's player has its own mute; the game must not add another. */
 .platform-youtube #btnSound { display: none; }
@@ -441,7 +441,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .hud-br { position: absolute; right: calc(10px + var(--safe-r)); bottom: calc(10px + var(--safe-b)); display: flex; gap: 14px; }
 .act-btn {
   position: relative;
-  width: clamp(76px, 21vw, 100px);
+  width: clamp(60px, min(21vw, 13vh), 100px);
   aspect-ratio: 1;
   padding: 0 0 18px;
   border-radius: 16px;
@@ -480,9 +480,9 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
   .selector-label { display: block; }
   .selector-row { flex-direction: row; gap: 4px; }
   .boss-bar { top: calc(14px + var(--safe-t)); }
-  .gauge { width: clamp(130px, 18vw, 190px); }
-  .act-btn { width: clamp(76px, 10vw, 100px); }
-  .dpad { width: clamp(120px, 18vw, 170px); }
+  .gauge { width: clamp(104px, min(18vw, 30vh), 190px); }
+  .act-btn { width: clamp(60px, min(10vw, 19vh), 100px); }
+  .dpad { width: clamp(96px, min(18vw, 30vh), 170px); }
 }
 @media (max-height: 520px) and (min-aspect-ratio: 1/1) {
   .hud-bl { flex-direction: row; align-items: flex-end; }
@@ -496,6 +496,12 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
   max-width: 90vw; text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* The host (YouTube, the app) paused the game: freeze every animation too. */
+.host-paused *, .host-paused *::before, .host-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .screen.show, .stars span.on, .new-best, .bar.super.ready, #btnSuper.ready, .bar.hp.low { animation: none; }

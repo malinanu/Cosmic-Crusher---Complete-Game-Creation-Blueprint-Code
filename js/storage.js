@@ -7,6 +7,10 @@
   var VERSION = 2;
   var TOP_RUNS = 10;
 
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
   function defaults() {
     return {
       version: VERSION,
@@ -15,7 +19,8 @@
       leaderboard: [],     // top runs: [{ score, level, date }] best first, no names
       planet: 'moon',
       seenHowTo: false,
-      settings: { music: 0.7, sfx: 0.9, vibration: true, shake: true, controls: 'dpad', muted: false }
+      // Screen shake starts off for players who ask for reduced motion.
+      settings: { music: 0.7, sfx: 0.9, vibration: true, shake: !reducedMotion(), controls: 'dpad', muted: false }
     };
   }
 

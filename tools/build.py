@@ -151,6 +151,12 @@ def validate(out, target):
                 problems.append("external URL in %s: %s" % (path, url))
             if re.search(r"""(?:src|href)=["']/|url\(["']?/""", text):
                 problems.append("absolute path in %s" % path)
+            if path.endswith(".html"):
+                # YouTube's CSP only runs nonce-tagged <script src> files.
+                if re.search(r"""\son[a-z]+\s*=\s*["']""", text):
+                    problems.append("inline event handler (on...=) in %s" % path)
+                if re.search(r"<script(?![^>]*\bsrc=)[^>]*>", text):
+                    problems.append("inline <script> block in %s" % path)
             if "navigator.language" in text:
                 problems.append("%s reads navigator.language (use the SDK's getLanguage)" % path)
     if total >= 30 * MiB:
