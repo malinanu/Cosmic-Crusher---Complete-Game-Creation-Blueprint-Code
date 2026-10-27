@@ -1,0 +1,26 @@
+{
+  "appId": "io.github.malinanu.cosmiccrusher",
+  "appName": "Cosmic Crusher",
+  "webDir": "../dist/mobile",
+  "backgroundColor": "#070818",
+  "android": {
+    "backgroundColor": "#070818"
+  },
+  "ios": {
+    "backgroundColor": "#070818",
+    "contentInset": "never"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 4000,
+      "launchAutoHide": true,
+      "backgroundColor": "#070818",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "DARK"
+    }
+  }
+}

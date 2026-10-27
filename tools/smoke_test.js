@@ -7,6 +7,8 @@
 //      signals, cloud saves, scores, pause/resume, audio, no network calls,
 //      mouse-only play
 //   3. the YouTube build across a range of aspect ratios
+//   4. the mobile build with a stand-in for the Capacitor native bridge
+//      (saves, splash/status bar, Android back button, app pause/resume)
 // Screenshots go to tools/out/. Exits non-zero if any check fails.
 //
 //   npm install --no-save playwright   (once, if Playwright isn't installed)
@@ -317,6 +319,76 @@ async function runYouTube(browser, base) {
   await ctx.close();
 }
 
+// ---- Mobile (Capacitor) build ----------------------------------------------------------
+
+// Pretends to be the Android app's native bridge, backed by localStorage so a
+// reload keeps the "device" storage.
+function capacitorBridge() {
+  const cap = window.__cap = { sets: 0, haptics: [], listeners: {}, exited: false, statusHidden: false, splashHidden: false };
+  window.Capacitor = {
+    isNativePlatform: () => true,
+    getPlatform: () => 'android',
+    Plugins: {
+      Preferences: {
+        get: ({ key }) => Promise.resolve({ value: localStorage.getItem('prefs:' + key) }),
+        set: ({ key, value }) => { cap.sets++; localStorage.setItem('prefs:' + key, value); return Promise.resolve(); }
+      },
+      App: {
+        addListener: (name, fn) => { (cap.listeners[name] = cap.listeners[name] || []).push(fn); return Promise.resolve({ remove() {} }); },
+        exitApp: () => { cap.exited = true; }
+      },
+      Haptics: { impact: (o) => { cap.haptics.push(o.style); return Promise.resolve(); } },
+      StatusBar: { hide: () => { cap.statusHidden = true; return Promise.resolve(); } },
+      SplashScreen: { hide: () => { cap.splashHidden = true; return Promise.resolve(); } }
+    }
+  };
+  cap.fire = (name) => (cap.listeners[name] || []).forEach((fn) => fn({}));
+}
+
+async function runCapacitor(browser, base) {
+  console.log('\n[mobile] dist/mobile with a stand-in Capacitor bridge');
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 });
+  await ctx.addInitScript(capacitorBridge);
+  const page = await ctx.newPage();
+  const errors = watchErrors(page, true);
+  await page.goto(base + '/index.html');
+  await page.waitForSelector('#menu.show', { timeout: 10000 });
+  await wait(page, 300);
+  const st = await page.evaluate(() => ({ id: CC.platform.id, status: __cap.statusHidden, splash: __cap.splashHidden }));
+  check(st.id === 'capacitor', 'game detects the native app');
+  check(st.status && st.splash, 'status bar hidden and splash dismissed once the menu is ready');
+
+  await page.evaluate(() => { CC.storage.data.seenHowTo = true; CC.ui.startLevel(1); });
+  await wait(page, 400);
+  await page.evaluate(() => __cap.fire('backButton'));
+  check(await page.isVisible('#pause.show'), 'Android back pauses a level');
+  await page.evaluate(() => __cap.fire('backButton'));
+  check(await page.evaluate(() => !document.querySelector('#pause.show') && CC.game.state !== 'paused'), 'Android back again resumes');
+
+  await page.evaluate(() => __cap.fire('pause'));
+  await wait(page, 300);
+  check(await page.evaluate(() => !CC.loop.running && !!document.querySelector('#pause.show')), 'app going to the background stops the game');
+  await page.evaluate(() => __cap.fire('resume'));
+  await wait(page, 200);
+  check(await page.evaluate(() => CC.loop.running), 'app coming back restarts the loop');
+
+  await page.evaluate(() => CC.platform.haptic(40));
+  check(await page.evaluate(() => __cap.haptics[__cap.haptics.length - 1] === 'MEDIUM'), 'vibration uses native haptics');
+
+  await page.click('#pause button:has-text("RESUME")');
+  await page.evaluate(() => CC.game.win());
+  await page.waitForSelector('#results.show', { timeout: 6000 });
+  check(await page.evaluate(() => __cap.sets > 0), 'progress is saved to device preferences');
+  await page.reload();
+  await page.waitForSelector('#menu.show', { timeout: 10000 });
+  check(await page.evaluate(() => CC.storage.data.unlocked >= 2), 'progress survives an app restart');
+  await page.evaluate(() => __cap.fire('backButton'));
+  check(await page.evaluate(() => __cap.exited), 'Android back on the main menu exits the app');
+
+  check(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
+  await ctx.close();
+}
+
 // ---- Aspect ratios --------------------------------------------------------------------
 
 const VIEWPORTS = [
@@ -367,10 +439,11 @@ async function runViewports(browser, base) {
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  execFileSync('python3', [path.join(__dirname, 'build.py'), 'youtube'], { stdio: 'inherit' });
+  execFileSync('python3', [path.join(__dirname, 'build.py'), 'all'], { stdio: 'inherit' });
   const dev = await serve(ROOT);
   const ytDir = path.join(ROOT, 'dist', 'youtube');
   const ytServer = await serve(ytDir, { 'Content-Security-Policy': YT_CSP });
+  const mobileServer = await serve(path.join(ROOT, 'dist', 'mobile'));
   const base = 'http://127.0.0.1:' + dev.address().port;
   const ytBase = 'http://127.0.0.1:' + ytServer.address().port;
   const browser = await chromium.launch();
@@ -389,10 +462,12 @@ async function runViewports(browser, base) {
 
     await runYouTube(browser, ytBase);
     await runViewports(browser, ytBase);
+    await runCapacitor(browser, 'http://127.0.0.1:' + mobileServer.address().port);
   } finally {
     await browser.close();
     dev.close();
     ytServer.close();
+    mobileServer.close();
   }
   console.log(failures.length ? `\n${failures.length} check(s) failed` : '\nall checks passed');
   process.exit(failures.length ? 1 : 0);

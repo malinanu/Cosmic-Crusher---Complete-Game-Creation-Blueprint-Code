@@ -1,7 +1,7 @@
 # Cosmic Crusher
 
 Spin the planet, roll the aliens under your astronaut, and **SPLAT!** them before they reach you.
-A 2D arcade game for phones and desktop browsers, built from the [game blueprint](docs/BLUEPRINT.md) and the art sheets in [`art/`](art/).
+A 2D arcade game for **YouTube Playables**, **Android**, **iPhone** and the web, built from the [game blueprint](docs/BLUEPRINT.md) and the art sheets in [`art/`](art/). Plain HTML5 Canvas + JavaScript: no engine, no network, about 0.5 MB.
 
 <p>
   <img src="docs/screenshots/menu-phone.jpg" width="200" alt="Main menu">
@@ -9,7 +9,7 @@ A 2D arcade game for phones and desktop browsers, built from the [game blueprint
   <img src="docs/screenshots/boss-desktop.jpg" width="420" alt="Gigant Blob boss fight">
 </p>
 
-This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a mini boss on level 10 and the Gigant Blob on level 20, the Classic White suit, the full HUD, settings and a leaderboard on this device. Sectors 2–5, the other suits and the weapons come next (see [Roadmap](#roadmap)).
+This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a mini boss on level 10 and the Gigant Blob on level 20, the Classic White suit, the full HUD, settings and your top runs. Sectors 2–5, the other suits and the weapons come next (see [Roadmap](#roadmap)).
 
 ## Play it
 
@@ -23,6 +23,94 @@ This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a min
 3. Under **Build and deployment**, choose **Deploy from a branch**, then pick `main` and `/ (root)`, and save.
 4. After a minute the game is live at `https://<your-user>.github.io/<repo-name>/`.
 
+## Builds
+
+| Build | Command | Output |
+|---|---|---|
+| YouTube Playables | `python3 tools/build.py youtube` | `dist/cosmic-crusher-youtube.zip` (upload this) |
+| Android / iOS web bundle | `python3 tools/build.py mobile` | `dist/mobile/` (used by Capacitor) |
+| Both | `python3 tools/build.py all` | |
+
+The build needs Python 3 with Pillow (`pip install pillow`). Every build is checked against YouTube's technical limits; it fails if a rule is broken:
+- bundle under 30 MiB;
+- no file over 30 MiB, and at most 8000 files;
+- safe file names and relative paths only;
+- no external URLs.
+
+The game itself never touches the network: fonts, sprites and sound all ship in the bundle.
+
+GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)) runs on every push. It produces three downloads under the run's **Artifacts**:
+- `youtube-playables-bundle`
+- `android-debug-apk`
+- `android-release-aab-unsigned`
+
+It also proves the iOS project compiles.
+
+### YouTube Playables
+
+The game follows the [Playables certification requirements](https://developers.google.com/youtube/gaming/playables/certification/requirements):
+- **SDK loading:** the Playables SDK loads before any game code.
+- **Ready signals:** `firstFrameReady` is sent on the loading screen, and `gameReady` once the menu is interactive.
+- **Saves:** progress saves only through the SDK's cloud save, after `loadData`.
+- **Pause:** pausing and resuming happen only through `onPause` and `onResume`.
+- **Sound:** YouTube's mute is respected, and there is no in-game mute button.
+- **Score:** `sendScore` reports the best run.
+- **Privacy:** the game asks for no names or text input.
+- **Devices:** touch, mouse and keyboard all work at every aspect ratio.
+
+`node tools/smoke_test.js` checks all of this against a stand-in SDK under YouTube's content security policy.
+
+To publish:
+1. Your channel needs access to Playables publishing. Apply through the YouTube Playables partner programme; access currently goes through a partner manager.
+2. Upload `dist/cosmic-crusher-youtube.zip` in the Playables developer portal.
+3. Run YouTube's [test suite](https://developers.google.com/youtube/gaming/playables/test_suite) on the uploaded build.
+4. Add listing images. Use `store/screenshot-*.jpg` for thumbnails; YouTube doesn't allow logos in them.
+
+### Android (Google Play) and iPhone (App Store)
+
+The apps are [Capacitor](https://capacitorjs.com) wrappers around the same game, in [`mobile/`](mobile/). They:
+- save to the device;
+- use native haptics;
+- hide the status bar;
+- close screens with Android's back button.
+
+App ID: `io.github.malinanu.cosmiccrusher`. Change it in `mobile/capacitor.config.json`, `mobile/android/app/build.gradle` and the Xcode project **before your first upload**. A store never lets you change it afterwards.
+
+```bash
+cd mobile
+npm install
+npm run sync       # builds dist/mobile and copies it into both native projects
+npm run android    # opens Android Studio
+npm run ios        # opens Xcode (macOS only)
+```
+
+**Google Play:**
+1. In Android Studio, choose **Build → Generate Signed Bundle**. Create an upload key and keep it safe.
+2. Upload the `.aab` in the Play Console.
+3. Fill in the listing:
+   - content rating questionnaire (cartoon violence, no data collected);
+   - data safety: no data collected;
+   - privacy policy: link to [PRIVACY.md](PRIVACY.md).
+4. Store art is in [`store/`](store/): a 1024×500 feature graphic and screenshots. The app icon is generated from `mobile/resources/`.
+
+**App Store:**
+1. You need a Mac with Xcode and an Apple Developer account ($99/year).
+2. Open the project with `npm run ios`.
+3. Set your Team under **Signing & Capabilities**.
+4. Choose **Product → Archive**, then upload through the Organizer.
+5. Use the same privacy answers: no data collected.
+
+**Version numbers:** bump `version` in `mobile/package.json`, `versionCode`/`versionName` in `mobile/android/app/build.gradle`, and `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` in Xcode.
+
+**Icons, splash and store images:**
+
+```bash
+node tools/make_store_art.js        # renders mobile/resources/* and store/* with the game's art
+python3 tools/install_app_art.py    # writes every Android/iOS icon and splash size
+```
+
+To use your own icon, replace the files in `mobile/resources/` (same sizes) and run only the second command.
+
 ## How to play
 
 | Action | Keyboard | Touch |
@@ -32,7 +120,8 @@ This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a min
 | Slam down fast while in the air | `↓` / `S` | press BOOST/SLAM again, D-pad down, or flick down |
 | SHIELD/CRUSH (needs a full Super Bar) | `Space` | SHIELD/CRUSH button |
 | Switch planet (Mars / Earth / Moon) | `1` `2` `3` | Object Selector |
-| Pause | `P` / `Esc` | pause button |
+| Pause | `P` | pause button |
+| Back / close a screen | `Esc` | BACK button, Android back |
 
 - **Crushing.** An alien that rolls under you while the planet spins faster than the white notch on the **ROLL SPEED** gauge gets crushed. If the spin is slower, it hurts you.
 - **Overheating.** Holding the needle in the red too long makes the astronaut stumble.
@@ -56,8 +145,8 @@ This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a min
 ## Project layout
 
 ```
-index.html            screens, HUD and script tags (no build step)
-css/style.css         the neon UI
+index.html            screens, HUD and script tags (runs as-is, no build step)
+css/style.css         the neon UI; css/fonts.css + fonts/ = bundled fonts
 js/config.js          every gameplay number: planets, enemies, boss, scoring
 js/levels.js          level table (blueprint formulas for spawn rate, speed, crush goal)
 js/game.js            physics, spawning, crushing, waves, boss, drawing the playfield
@@ -67,10 +156,13 @@ js/assets.js          sprite loader + code-drawn fallbacks
 js/hud.js, ui.js      HUD and menus
 js/input.js           keyboard, drag, D-pad, tilt
 js/audio.js           synthesized sound effects and music (Web Audio, no files)
-js/storage.js         save data in localStorage
+js/storage.js         save data (progress, settings, top runs)
+js/platform.js        YouTube Playables SDK / Capacitor app / browser differences
 assets/sprites/       transparent PNGs cut from the art sheets
 art/                  your original art sheets and mockups
-tools/                sprite extractor and tests
+mobile/               Capacitor project: android/, ios/, resources/ (icon + splash masters)
+store/                store listing art
+tools/                build, sprite extractor, art generators, tests
 ```
 
 ## Your art
@@ -118,10 +210,15 @@ Some URL options help when testing:
 
 ```bash
 node tools/check_levels.js     # level table matches the blueprint formulas
-node tools/smoke_test.js       # plays through menus, a level, super, pause, win/lose, the boss
+node tools/smoke_test.js       # full playthrough + YouTube Playables checks + 8 aspect ratios
 ```
 
-The smoke test needs Playwright (`npm install --no-save playwright && npx playwright install chromium`). It writes screenshots to `tools/out/`.
+The smoke test needs Playwright (`npm install --no-save playwright && npx playwright install chromium`). It covers three runs:
+- **Development copy:** menus, a level, the super, pause, win and lose, and the boss.
+- **YouTube build:** run under YouTube's content security policy with a recording stand-in for the SDK (`tools/yt_sdk_mock.js`). It checks the ready signals, cloud save, score, pause and resume, audio, no network calls, and mouse-only play.
+- **Aspect ratios:** eight sizes from 360×640 to 1050×450.
+
+It writes screenshots to `tools/out/`.
 
 ## Roadmap
 
@@ -136,4 +233,4 @@ Phase 2, after your feedback on this preview:
 - **Four more bosses,** including the Final Boss from the mockup
 - **Suits:** Magma Vanguard (Kinetic Aura) and Void Strider (Energy Field)
 - **The 8 weapons from the Weapons pack:** equip one and it auto-fires on a cooldown, with upgrades bought from a shop
-- **Optional extras:** an online leaderboard and a Ring Run bonus mode
+- **Optional extra:** a Ring Run bonus mode
