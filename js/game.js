@@ -54,8 +54,24 @@
     this.R = Math.max(70, Math.min(260, Math.min(w * 0.32, h * (portrait ? 0.2 : 0.25))));
     this.cx = w / 2;
     this.cy = portrait ? h * 0.5 : h * 0.57;
+    if (portrait) {
+      // Keep the astronaut below the top HUD (score, boss bar), notch included.
+      var clear = 140 + safeTop() + this.R * (1 + CC.config.astronaut.height) + 4;
+      this.cy = Math.max(this.cy, Math.min(clear, h - this.R - 8));
+    }
     this.bg.resize(w, h, dpr);
   };
+
+  // Height of the notch / status-bar area (CSS env(safe-area-inset-top)).
+  var probe = null;
+  function safeTop() {
+    if (!probe) {
+      probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;top:0;left:0;width:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top, 0px)';
+      document.body.appendChild(probe);
+    }
+    return probe.offsetHeight || 0;
+  }
 
   Game.prototype.resetRun = function () {
     var A = CC.config.astronaut;
