@@ -40,7 +40,11 @@
 
   Game.prototype.resize = function () {
     var w = window.innerWidth, h = window.innerHeight;
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Full device resolution (up to 3×) so text and sprites stay sharp,
+    // within a pixel budget that keeps big tablets and monitors fast.
+    var dpr = Math.min(3, window.devicePixelRatio || 1);
+    var budget = 4.5e6;
+    if (w * h * dpr * dpr > budget) dpr = Math.max(1, Math.sqrt(budget / (w * h)));
     this.w = w; this.h = h; this.dpr = dpr;
     this.canvas.width = Math.round(w * dpr);
     this.canvas.height = Math.round(h * dpr);

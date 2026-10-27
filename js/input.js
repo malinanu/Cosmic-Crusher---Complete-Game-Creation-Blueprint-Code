@@ -46,8 +46,12 @@
       case ' ':
         if (enabled) { pending.super = true; e.preventDefault(); }
         break;
-      case 'p': case 'P': case 'Escape':
+      case 'p': case 'P':
         fire('pause');
+        break;
+      case 'Escape':
+        // never preventDefault on Esc: the host page (YouTube) needs it too
+        fire('escape');
         break;
       case '1': fire('planet', 'mars'); break;
       case '2': fire('planet', 'earth'); break;
@@ -187,21 +191,12 @@
     return out;
   }
 
-  function vibrate(ms) {
-    // Browsers refuse (and log an error) until the player has interacted.
-    var active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
-    if (navigator.vibrate && active) {
-      try { navigator.vibrate(ms); } catch (e) { /* unsupported */ }
-    }
-  }
-
   CC.input = {
     init: init,
     read: read,
     on: on,
     setEnabled: setEnabled,
     enableTilt: enableTilt,
-    disableTilt: disableTilt,
-    vibrate: vibrate
+    disableTilt: disableTilt
   };
 })(window.CC = window.CC || {});

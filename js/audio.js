@@ -4,7 +4,9 @@
   'use strict';
 
   var ac = null, master, sfxBus, musicBus, noiseBuf;
-  var vol = { music: 0.7, sfx: 0.9, muted: false };
+  // system = the host allows sound (YouTube's audio setting); paused = the
+  // host paused the game. Either one silences everything.
+  var vol = { music: 0.7, sfx: 0.9, muted: false, system: true, paused: false };
   var lastPlayed = {};
 
   function ensure() {
@@ -26,20 +28,39 @@
   }
 
   // Browsers only allow audio after a user gesture.
+  function silent() { return vol.muted || !vol.system || vol.paused; }
+
   function unlock() {
     if (!ensure()) return;
-    if (ac.state === 'suspended') ac.resume();
+    if (ac.state === 'suspended' && !vol.paused) ac.resume();
   }
 
   function applyVolumes() {
     if (!ac) return;
-    master.gain.value = vol.muted ? 0 : 1;
+    master.gain.value = silent() ? 0 : 1;
     sfxBus.gain.value = vol.sfx * 0.8;
     musicBus.gain.value = vol.music * 0.32;
   }
 
   function setVolumes(music, sfx) { vol.music = music; vol.sfx = sfx; applyVolumes(); }
   function setMuted(m) { vol.muted = m; applyVolumes(); }
+  function setSystemAllowed(on) { vol.system = !!on; applyVolumes(); }
+
+  // Host pause: stop the music clock and the audio hardware entirely.
+  function suspend() {
+    vol.paused = true;
+    if (music.timer) clearInterval(music.timer);
+    music.timer = null;
+    applyVolumes();
+    if (ac && ac.state === 'running') ac.suspend();
+  }
+
+  function resume() {
+    vol.paused = false;
+    applyVolumes();
+    if (ac && ac.state === 'suspended') ac.resume();
+    if (music.song && !music.timer) runMusic();
+  }
 
   function env(g, t, a, peak, d) {
     g.gain.setValueAtTime(0.0001, t);
@@ -141,7 +162,7 @@
   };
 
   function play(name, opts) {
-    if (!ac || vol.muted || !SFX[name]) return;
+    if (!ac || silent() || !SFX[name]) return;
     var now = ac.currentTime;
     if (lastPlayed[name] && now - lastPlayed[name] < 0.04) return;
     lastPlayed[name] = now;
@@ -182,12 +203,17 @@
     stopMusic();
     music.song = SONGS[name];
     music.step = 0;
+    if (!vol.paused) runMusic();
+  }
+
+  function runMusic() {
     music.next = ac.currentTime + 0.1;
     music.timer = setInterval(function () {
       if (!music.song || ac.state !== 'running') return;
       var stepDur = 60 / music.song.bpm / 4;
+      if (music.next < ac.currentTime) music.next = ac.currentTime + 0.05;
       while (music.next < ac.currentTime + 0.15) {
-        if (vol.music > 0 && !vol.muted) scheduleStep(music.song, music.step, music.next);
+        if (vol.music > 0 && !silent()) scheduleStep(music.song, music.step, music.next);
         music.next += stepDur;
         music.step++;
       }
@@ -205,6 +231,11 @@
     play: play,
     setVolumes: setVolumes,
     setMuted: setMuted,
+    setSystemAllowed: setSystemAllowed,
+    suspend: suspend,
+    resume: resume,
+    get masterGain() { return master ? master.gain.value : null; },
+    get state() { return ac ? ac.state : 'none'; },
     startMusic: startMusic,
     stopMusic: stopMusic
   };

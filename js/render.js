@@ -111,7 +111,7 @@
 
   var texCache = {};
   function planetTexture(type, R) {
-    var S = Math.min(1024, Math.ceil(R * 2 * Math.min(2, window.devicePixelRatio || 1)));
+    var S = Math.min(1280, Math.ceil(R * 2 * Math.min(3, window.devicePixelRatio || 1)));
     var key = type + ':' + S;
     if (!texCache[key]) {
       var override = CC.assets.get('planet_' + type);

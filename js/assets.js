@@ -5,6 +5,15 @@
   'use strict';
 
   var SPRITE_DIR = 'assets/sprites/';
+  // Release builds list the sprites they ship (CC.SPRITES) and may use WebP;
+  // the development copy probes every key as PNG.
+  var EXT = CC.SPRITE_EXT || 'png';
+  var SHIPPED = CC.SPRITES ? CC.SPRITES.reduce(function (m, k) { m[k] = true; return m; }, {}) : null;
+
+  function url(key) {
+    if (SHIPPED && !SHIPPED[key]) return null;
+    return SPRITE_DIR + key + '.' + EXT;
+  }
 
   var KEYS = [
     'astro_idle', 'astro_run1', 'astro_run2', 'astro_run3', 'astro_leap', 'astro_splat',
@@ -19,17 +28,18 @@
 
   function load(onProgress) {
     var done = 0;
-    return Promise.all(KEYS.map(function (key) {
+    var keys = KEYS.filter(url);
+    return Promise.all(keys.map(function (key) {
       return new Promise(function (resolve) {
         var img = new Image();
         img.onload = function () { images[key] = img; finish(); };
         img.onerror = finish;
         function finish() {
           done++;
-          if (onProgress) onProgress(done / KEYS.length);
+          if (onProgress) onProgress(done / keys.length);
           resolve();
         }
-        img.src = SPRITE_DIR + key + '.png';
+        img.src = url(key);
       });
     }));
   }
@@ -179,6 +189,8 @@
   }
 
   CC.assets = {
+    keys: KEYS,
+    url: url,
     load: load,
     get: get,
     drawFeet: drawFeet,

@@ -1,14 +1,16 @@
 // Boot: load save + sprites, wire up input/HUD/UI, and run the main loop.
-// Debug URL params: ?level=N jumps straight into a level, &god=1 makes the
-// astronaut invulnerable, &boss=1 skips to the boss on boss levels,
-// &debug=1 draws hit zones.
+// Debug URL params (development copy only): ?level=N jumps straight into a
+// level, &god=1 makes the astronaut invulnerable, &boss=1 skips to the boss
+// on boss levels, &debug=1 draws hit zones.
 (function (CC) {
   'use strict';
 
   var STEP = 1 / CC.config.fps;
+  var BUILD = CC.BUILD || { target: 'dev', dev: true };
 
   function params() {
     var out = {};
+    if (!BUILD.dev) return out;
     location.search.replace(/^\?/, '').split('&').forEach(function (kv) {
       if (!kv) return;
       var p = kv.split('=');
@@ -17,10 +19,19 @@
     return out;
   }
 
+  function nextPaint() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+    });
+  }
+
   function boot() {
     var q = params();
+    var P = CC.platform;
     var touch = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
-    CC.storage.load();
+
+    window.addEventListener('error', function (e) { P.logError(e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { P.logError(e.reason); });
 
     var canvas = document.getElementById('game');
     var game = new CC.Game(canvas);
@@ -58,26 +69,54 @@
     ]).catch(function () {}) : Promise.resolve();
     var timeout = new Promise(function (r) { setTimeout(r, 2500); });
 
-    Promise.all([
-      CC.assets.load(function (p) { fill.style.width = Math.round(p * 100) + '%'; }),
-      Promise.race([fonts, timeout])
-    ]).then(function () {
+    // The loading screen is on screen once it has painted.
+    nextPaint().then(function () {
+      P.firstFrameReady();
+      return Promise.all([
+        P.init().then(function () { return CC.storage.load(); }),
+        CC.assets.load(function (p) { fill.style.width = Math.round(p * 100) + '%'; }),
+        Promise.race([fonts, timeout])
+      ]);
+    }).then(function () {
       CC.hud.init();
       CC.ui.init(game, { touch: touch });
+      CC.audio.setSystemAllowed(P.audioAllowed());
+      P.onAudioChange(function (on) { CC.audio.setSystemAllowed(on); });
       if (q.level) {
         CC.storage.data.seenHowTo = true;
         CC.ui.startLevel(parseInt(q.level, 10) || 1);
       } else {
         CC.ui.goMenu();
       }
-      start(game);
+      loop.start();
+      // Interactive from here (main menu or a level).
+      return nextPaint().then(P.gameReady);
+    }).catch(function (err) {
+      P.logError(err);
+    });
+
+    var loop = makeLoop(game);
+    CC.loop = loop;
+
+    // Host pause (YouTube onPause, app in background, browser tab hidden):
+    // stop everything and save; on resume wait in the pause screen.
+    P.onPause(function () {
+      CC.ui.systemPause();
+      loop.stop();
+      CC.input.setEnabled(false);
+      CC.audio.suspend();
+      CC.storage.flush();
+    });
+    P.onResume(function () {
+      CC.audio.resume();
+      loop.start();
     });
   }
 
-  function start(game) {
-    var last = performance.now();
-    var acc = 0;
+  function makeLoop(game) {
+    var raf = 0, last = 0, acc = 0;
     function frame(now) {
+      raf = requestAnimationFrame(frame);
       var dt = Math.min(0.1, (now - last) / 1000);
       last = now;
       acc += dt;
@@ -90,9 +129,20 @@
       if (steps === 6) acc = 0;
       game.render(acc / STEP);
       CC.hud.update(game);
-      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
+    return {
+      start: function () {
+        if (raf) return;
+        last = performance.now();
+        acc = 0;
+        raf = requestAnimationFrame(frame);
+      },
+      stop: function () {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      },
+      get running() { return raf !== 0; }
+    };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

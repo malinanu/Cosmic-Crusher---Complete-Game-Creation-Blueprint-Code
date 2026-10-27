@@ -329,19 +329,18 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .res-stats b { font-weight: normal; color: var(--yellow); }
 .new-best { text-align: center; font-family: var(--font-pop); font-size: 24px; color: var(--yellow); margin-bottom: 8px; animation: pulse 0.8s infinite alternate; }
 @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
-.name-form { margin-bottom: 12px; text-align: center; }
-.name-row { display: flex; gap: 8px; margin-top: 6px; }
-.name-row input {
-  flex: 1; min-width: 0;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 2px solid var(--cyan);
-  background: #08143a;
-  color: #fff;
-  font-family: var(--font-ui);
-  font-size: 18px;
-  text-transform: uppercase;
-  user-select: text; -webkit-user-select: text;
+.res-rank { text-align: center; font-size: 15px; color: var(--cyan); margin-bottom: 8px; }
+.res-end {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--yellow);
+  background: rgba(60, 40, 0, 0.45);
+  color: #ffe9a8;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
 }
 
 /* ---------- HUD ---------- */
@@ -427,9 +426,10 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; border-radius: 5
 .g-hub { fill: #2a4a7a; stroke: #bff3ff; stroke-width: 3; }
 .gauge svg { filter: drop-shadow(0 0 6px rgba(65, 216, 255, 0.5)); }
 
-.dpad { position: relative; width: clamp(130px, 38vw, 170px); aspect-ratio: 1; display: none; border-radius: 50%; border: 2px solid rgba(120, 190, 255, 0.45); background: radial-gradient(circle, rgba(40, 80, 140, 0.4), rgba(10, 24, 60, 0.35)); }
-#hud.touch:not(.tilt-mode) .dpad { display: block; }
-#hud.touch.tilt-mode .dpad { display: block; opacity: 0.6; }
+.dpad { position: relative; width: clamp(130px, 38vw, 170px); aspect-ratio: 1; display: block; border-radius: 50%; border: 2px solid rgba(120, 190, 255, 0.45); background: radial-gradient(circle, rgba(40, 80, 140, 0.4), rgba(10, 24, 60, 0.35)); }
+#hud.tilt-mode .dpad { opacity: 0.6; }
+/* YouTube's player has its own mute; the game must not add another. */
+.platform-youtube #btnSound { display: none; }
 .dp { position: absolute; width: 34%; height: 34%; padding: 18%; border: 2px solid rgba(160, 210, 255, 0.55); background: rgba(60, 110, 180, 0.55); }
 .dp svg { width: 100%; height: 100%; fill: rgba(220, 240, 255, 0.85); }
 .dp.pressed { background: rgba(110, 190, 255, 0.85); }

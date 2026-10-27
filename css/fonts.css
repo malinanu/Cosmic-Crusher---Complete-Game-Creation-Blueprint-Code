@@ -1,0 +1,17 @@
+/* Bundled fonts (Latin subset) so the game never needs the network.
+   Russo One: SIL Open Font License 1.1. Luckiest Guy: Apache License 2.0.
+   Licence texts are in fonts/. */
+@font-face {
+  font-family: "Russo One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/russo-one-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Luckiest Guy";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/luckiest-guy-latin.woff2") format("woff2");
+}

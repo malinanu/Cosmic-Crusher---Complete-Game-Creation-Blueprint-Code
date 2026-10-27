@@ -136,10 +136,9 @@ async function run(browser, base, label, viewport, touch) {
   await page.waitForSelector('#results.show', { timeout: 6000 });
   await wait(page, 600);
   await shot(page, label + '_07_win');
-  check(await page.isVisible('#nameForm'), 'top-10 score asks for a name');
-  await page.fill('#nameInput', 'tester');
-  await page.click('#nameForm button');
-  check(await game(page, () => CC.storage.data.leaderboard.length === 1 && CC.storage.data.unlocked >= 2), 'score saved and level 2 unlocked');
+  check(await page.locator('input[type=text], input:not([type])').count() === 0, 'no text input (no names collected)');
+  check(await page.isVisible('#resRank'), 'results show the run\'s place in your top runs');
+  check(await game(page, () => CC.storage.data.leaderboard.length === 1 && CC.storage.data.unlocked >= 2), 'run recorded and level 2 unlocked');
   await page.click('#results button:has-text("MENU")');
   await page.click('#menu button:has-text("LEADERBOARD")');
   await wait(page, 300);

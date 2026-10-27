@@ -7,9 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="description" content="Cosmic Crusher: spin the planet to crush alien invaders.">
   <title>Cosmic Crusher</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Russo+One&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -120,7 +118,7 @@
         <button class="btn btn-blue" data-go="leaderboard">LEADERBOARD</button>
         <button class="btn btn-blue" data-go="settings">SETTINGS</button>
       </div>
-      <div class="menu-foot">Sector 1 preview build · progress saves on this device</div>
+      <div class="menu-foot">Sector 1 preview · 20 levels</div>
     </div>
   </div>
 
@@ -173,7 +171,7 @@
 
   <div id="leaderboard" class="screen">
     <div class="panel">
-      <div class="tabs"><span class="tab active">THIS DEVICE</span><span class="tab disabled" title="Online scores are coming later">GLOBAL · SOON</span></div>
+      <div class="tabs"><span class="tab active">YOUR TOP RUNS</span></div>
       <div class="lb-title">
         <span>TOP COSMIC<br>CRUSHERS</span>
         <img src="assets/sprites/icon_trophy.png" alt="" onerror="this.remove()">
@@ -220,7 +218,7 @@
         <button class="btn btn-blue" data-action="restart">RESTART LEVEL</button>
         <button class="btn btn-blue" data-action="howto">HOW TO PLAY</button>
         <button class="btn btn-blue" data-go="settings">SETTINGS</button>
-        <button class="btn btn-red" data-action="quit">QUIT TO MENU</button>
+        <button class="btn btn-red" data-action="quit">MAIN MENU</button>
       </div>
     </div>
   </div>
@@ -236,13 +234,8 @@
         <div><span>BEST COMBO</span><b id="resCombo">x0</b></div>
       </div>
       <div class="new-best hidden" id="resBest">NEW BEST!</div>
-      <form id="nameForm" class="name-form hidden" autocomplete="off">
-        <div class="hint">Top-10 score! Enter your name:</div>
-        <div class="name-row">
-          <input id="nameInput" maxlength="12" placeholder="CADET" aria-label="Your name">
-          <button class="btn btn-green small" type="submit">SAVE</button>
-        </div>
-      </form>
+      <div class="res-rank hidden" id="resRank"></div>
+      <div class="res-end hidden" id="resEnd">You've crushed every level in this preview. New sectors are coming soon!</div>
       <div class="menu-buttons">
         <button class="btn btn-orange" data-action="next" id="resNext">NEXT LEVEL</button>
         <button class="btn btn-blue" data-action="retry">RETRY</button>
@@ -254,6 +247,7 @@
   <div id="toast" class="toast"></div>
 
   <script src="js/config.js"></script>
+  <script src="js/platform.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/assets.js"></script>

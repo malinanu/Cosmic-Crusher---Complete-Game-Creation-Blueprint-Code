@@ -96,6 +96,24 @@
     show('pause', { noStack: true });
   }
 
+  // Esc / Android back: close the open screen, or pause a running level.
+  // Returns false at the main menu so the app can exit there.
+  var CLOSABLE = { levels: 1, settings: 1, leaderboard: 1, weapons: 1 };
+  function escape() {
+    if (current && CLOSABLE[current]) { back(); return true; }
+    if (current === 'howto') { $('howtoGo').click(); return true; }
+    if (current === 'pause') { resumeGame(); return true; }
+    if (current === 'results') { goMenu(); return true; }
+    if (!current && game.mode === 'level') { pauseGame(); return true; }
+    return false;
+  }
+
+  // The system paused us (YouTube onPause, app backgrounded, tab hidden).
+  function systemPause() {
+    if (!game) return;
+    if (game.mode === 'level' && !current && game.state !== 'paused' && game.state !== 'done') pauseGame();
+  }
+
   function resumeGame() {
     hideScreens();
     game.resume();
@@ -117,12 +135,12 @@
     $('resCrushes').textContent = result.crushes;
     $('resCombo').textContent = 'x' + result.bestCombo;
     $('resBest').classList.toggle('hidden', !rec.newBest || result.score === 0);
+    $('resRank').textContent = rec.rank === 0 ? 'YOUR BEST RUN EVER!' : rec.rank > 0 ? '#' + (rec.rank + 1) + ' IN YOUR TOP RUNS' : '';
+    $('resRank').classList.toggle('hidden', rec.rank < 0);
     var next = $('resNext');
     next.classList.toggle('hidden', !result.won || last);
-    var form = $('nameForm');
-    form.classList.toggle('hidden', !CC.storage.qualifies(result.score));
-    $('nameInput').value = CC.storage.data.lastName || '';
-    if (last) toast('More sectors are on the way. Thanks for playing!');
+    // Tell the player plainly when there is nothing more to play yet.
+    $('resEnd').classList.toggle('hidden', !last);
     backStack = [];
     current = null;
     show('results', { noStack: true });
@@ -176,22 +194,19 @@
     if (!d.leaderboard.length) {
       var li = document.createElement('li');
       li.className = 'empty';
-      li.textContent = 'No scores yet. Go crush some aliens!';
+      li.textContent = 'No runs yet. Go crush some aliens!';
       ol.appendChild(li);
     }
-    var best = null;
+    var latest = d.leaderboard.reduce(function (m, e) { return Math.max(m, e.date); }, 0);
     d.leaderboard.forEach(function (e, i) {
       var li = document.createElement('li');
       var medal = ['gold', 'silver', 'bronze'][i] || '';
-      var mine = d.lastName && e.name === d.lastName;
-      if (mine && best === null) best = i;
-      li.className = medal + (mine ? ' me' : '');
+      li.className = medal + (e.date === latest ? ' me' : '');
       li.innerHTML = '<span class="rank-cell">' + (i < 3 ? '🏆' : (i + 1) + '.') + '</span>' +
-        '<span class="name"></span><span class="pts">' + e.score.toLocaleString('en-US') + ' pts</span>';
-      li.querySelector('.name').textContent = e.name + ' · L' + e.level;
+        '<span class="name">LEVEL ' + e.level + '</span><span class="pts">' + e.score.toLocaleString('en-US') + ' pts</span>';
       ol.appendChild(li);
     });
-    $('lbRank').textContent = best === null ? '—' : ordinal(best + 1);
+    $('lbRank').textContent = d.leaderboard.length ? d.leaderboard[0].score.toLocaleString('en-US') : '—';
   }
 
   function ordinal(n) {
@@ -205,11 +220,21 @@
     WEAPONS.forEach(function (w) {
       var card = document.createElement('div');
       card.className = 'weapon-card';
-      card.innerHTML = '<div class="w-img"><img alt="" src="assets/sprites/weapon_' + w.id + '.png"></div>' +
+      card.innerHTML = '<div class="w-img"></div>' +
         '<div class="w-name"></div><div class="w-text"></div><div class="w-lock">LOCKED</div>';
       card.querySelector('.w-name').textContent = w.name;
       card.querySelector('.w-text').textContent = w.text;
-      card.querySelector('img').onerror = function () { this.parentNode.classList.add('missing'); this.remove(); };
+      var box = card.querySelector('.w-img');
+      var url = CC.assets.url('weapon_' + w.id);
+      if (url) {
+        var img = new Image();
+        img.alt = '';
+        img.onerror = function () { box.classList.add('missing'); img.remove(); };
+        img.src = url;
+        box.appendChild(img);
+      } else {
+        box.classList.add('missing');
+      }
       list.appendChild(card);
     });
   }
@@ -242,7 +267,8 @@
   function applySettings() {
     var s = settings();
     CC.audio.setVolumes(s.music, s.sfx);
-    CC.audio.setMuted(s.muted);
+    // On YouTube the player's own mute is the only mute (no in-game button).
+    CC.audio.setMuted(CC.platform.id === 'youtube' ? false : s.muted);
     game.settings.shake = s.shake;
     CC.hud.setControls(s.controls, touch);
     document.getElementById('btnSound').classList.toggle('muted', !!s.muted);
@@ -262,7 +288,7 @@
     $('setVibration').onclick = function () {
       settings().vibration = !settings().vibration;
       CC.storage.save(); renderSettings();
-      if (settings().vibration) CC.input.vibrate(40);
+      if (settings().vibration) CC.platform.haptic(40);
     };
     $('setShake').onclick = function () {
       settings().shake = !settings().shake;
@@ -296,7 +322,7 @@
 
   function bindGameEvents() {
     var A = CC.audio;
-    function buzz(ms) { if (settings().vibration && game.mode === 'level') CC.input.vibrate(ms); }
+    function buzz(ms) { if (settings().vibration && game.mode === 'level') CC.platform.haptic(ms); }
     game.on('crush', function (e) { A.play('splat', e); buzz(12); });
     game.on('hurt', function () { A.play('hurt'); buzz([40, 30, 40]); });
     game.on('boost', function () { A.play('boost'); });
@@ -352,14 +378,6 @@
       });
     });
 
-    $('nameForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (!lastResult) return;
-      var rank = CC.storage.addScore($('nameInput').value, lastResult.score, lastResult.level);
-      this.classList.add('hidden');
-      toast('Saved! You are #' + (rank + 1) + ' on this device.');
-    });
-
     $('btnPause').addEventListener('click', function () { CC.audio.play('ui'); pauseGame(); });
     $('btnSound').addEventListener('click', function () {
       settings().muted = !settings().muted;
@@ -371,11 +389,12 @@
     });
 
     CC.input.on('pause', pauseGame);
+    CC.input.on('escape', escape);
+    CC.platform.onBack(function () { if (!escape()) CC.platform.exitApp(); });
     CC.input.on('planet', function (key) { if (game.mode === 'level' && game.state !== 'paused') game.setPlanet(key); });
 
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden && game.mode === 'level' && game.state !== 'paused' && game.state !== 'done') pauseGame();
-    });
+    document.body.classList.add('platform-' + CC.platform.id);
+    if (!CC.platform.tiltAvailable) document.querySelector('.style-btn[data-controls="tilt"]').classList.add('hidden');
 
     if (!touch) {
       $('howtoKeys').classList.add('show');
@@ -389,6 +408,7 @@
 
   CC.ui = {
     init: init,
+    systemPause: systemPause,
     goMenu: goMenu,
     startLevel: startLevel,
     show: show,
