@@ -131,7 +131,9 @@
     CC.input.setEnabled(false);
     var rec = CC.storage.recordLevel(result);
     var last = result.won && result.level >= CC.levels.maxPlayable;
-    $('resTitle').textContent = !result.won ? 'CRUSHED!' : last ? 'SECTOR 1 CLEARED!' : 'LEVEL ' + result.level + ' CLEAR!';
+    var sec1 = result.won && result.level === 20;
+    var sec2 = result.won && result.level === 40;
+    $('resTitle').textContent = !result.won ? 'CRUSHED!' : sec1 ? 'SECTOR 1 CLEARED!' : sec2 ? 'SECTOR 2 CLEARED!' : 'LEVEL ' + result.level + ' CLEAR!';
     $('resPlate').classList.toggle('red', !result.won);
     $('resSplat').classList.toggle('hidden', result.won);
     // Stars always show, empty on a loss; the checklist says what each needs.

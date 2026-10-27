@@ -7,13 +7,13 @@
 
   var SECTORS = [
     { id: 1, name: 'The Inner Ring', first: 1, last: 20, planet: 'moon', available: true },
-    { id: 2, name: 'Asteroid Belt', first: 21, last: 40, available: false },
+    { id: 2, name: 'Asteroid Belt', first: 21, last: 40, planet: 'mars', available: true },
     { id: 3, name: 'Gas Giants', first: 41, last: 60, available: false },
     { id: 4, name: 'Deep Outer Rim', first: 61, last: 80, available: false },
     { id: 5, name: 'Cosmic Edge', first: 81, last: 100, available: false }
   ];
 
-  var MAX_PLAYABLE = 20;
+  var MAX_PLAYABLE = 40;
 
   function spawnFrames(L) { return Math.max(30, 120 - L * 0.9); }
   function alienSpeed(L) { return 0.8 + 0.02 * L; }
@@ -24,15 +24,23 @@
     var mix = { crawler: 1 };
     if (L >= 4) mix.bouncer = Math.min(0.45, 0.15 + 0.03 * (L - 4));
     if (L >= 11) mix.roller = Math.min(0.3, 0.1 + 0.025 * (L - 11));
+    if (L >= 21) mix.beetle = Math.min(0.4, 0.15 + 0.025 * (L - 21));
     return mix;
   }
 
   // Score needed for the third star (see CC.config.stars).
-  function starTarget(goal, mix, burst, maxAlive, boss) {
+  function starTarget(goal, mix, burst, maxAlive, boss, L) {
     var C = CC.config, P = C.stars, S = C.score;
     var weight = 0, points = 0;
     for (var k in mix) { weight += mix[k]; points += mix[k] * C.enemies[k].score; }
-    var crush = goal * points / weight * burst * (P.comboBase + P.comboPerAlive * maxAlive);
+    var comboMult;
+    if (L && L > 20) {
+      var s2 = P.sector2 || { base: 4.75, perLevel: 0.045 };
+      comboMult = s2.base + (L - 21) * s2.perLevel;
+    } else {
+      comboMult = burst * (P.comboBase + P.comboPerAlive * maxAlive);
+    }
+    var crush = goal * points / weight * comboMult;
     var bossPts = boss ? C.boss[boss.type].hp * boss.hpScale * S.bossHit + S.bossDefeat : 0;
     var clear = C.astronaut.maxHealth * P.clearHealth * S.clearPerHealth;
     return Math.round((crush + bossPts + clear) / 250) * 250;
@@ -63,10 +71,12 @@
       L = Math.max(1, Math.min(MAX_PLAYABLE, L | 0));
       var goal = crushGoal(L);
       var boss = null;
+      var sector = this.sectorFor(L);
       if (L % 10 === 0) {
-        // Mid-sector mini boss on 10, full sector boss on 20.
+        // Mid-sector mini boss on 10 & 30, full sector boss on 20 & 40.
         var full = L % 20 === 0;
-        boss = { type: 'blob', scale: full ? 1 : 0.72, hpScale: full ? 1 : 0.5, mini: !full };
+        var bossType = sector.id === 2 ? 'rockgolem' : 'blob';
+        boss = { type: bossType, scale: full ? 1 : 0.72, hpScale: full ? 1 : 0.5, mini: !full };
         goal = Math.round(goal * 0.4); // shorter minion phase before the boss
       }
       var waves = boss ? 2 : 3 + Math.floor(L / 7);
@@ -76,7 +86,10 @@
       var mix = enemyMix(L);
       return {
         level: L,
-        sector: this.sectorFor(L),
+        sector: sector,
+        physics: {
+          frictionScale: sector.id === 2 ? 1.012 : 1.0
+        },
         spawnFrames: spawnFrames(L),
         speed: alienSpeed(L),
         burst: burst,
@@ -86,7 +99,7 @@
         walkScale: 1 + L * 0.02,
         mix: mix,
         boss: boss,
-        target: starTarget(goal, mix, burst, maxAlive, boss)
+        target: starTarget(goal, mix, burst, maxAlive, boss, L)
       };
     }
   };

@@ -25,9 +25,12 @@ for (let n = 1; n <= L.maxPlayable; n++) {
   check(lv.waves.length === (isBoss ? 2 : 3 + Math.floor(n / 7)), `L${n} wave count`);
   check(!!lv.mix.bouncer === n >= 4, `L${n} bouncers from level 4`);
   check(!!lv.mix.roller === n >= 11, `L${n} rollers from level 11`);
-  check(lv.sector.id === 1, `L${n} is in sector 1`);
+  check(!!lv.mix.beetle === n >= 21, `L${n} beetles from level 21`);
+  check(lv.sector.id === (n <= 20 ? 1 : 2), `L${n} is in sector ${n <= 20 ? 1 : 2}`);
 }
 check(L.get(10).boss.mini === true && L.get(20).boss.mini === false, 'mini boss on 10, full boss on 20');
+check(L.get(30).boss.mini === true && L.get(40).boss.mini === false, 'mini boss on 30, full boss on 40');
+check(L.get(10).boss.type === 'blob' && L.get(30).boss.type === 'rockgolem', 'Sector 1 blob vs Sector 2 rockgolem');
 
 // Three-star target scores: positive, a multiple of 250, and growing with
 // the level (boss levels have a shorter minion phase, so compare them with
@@ -41,7 +44,7 @@ for (let n = 1; n <= L.maxPlayable; n++) {
 }
 check(L.get(99).level === L.maxPlayable, 'levels past the playable range clamp');
 
-const rows = [1, 4, 10, 11, 19, 20].map((n) => {
+const rows = [1, 4, 10, 11, 19, 20, 21, 30, 31, 40].map((n) => {
   const lv = L.get(n);
   return `L${String(n).padStart(2)}  spawn ${lv.spawnFrames.toFixed(1)}f  speed ${lv.speed.toFixed(2)}  goal ${lv.goal}  waves ${lv.waves.join('/')}  burst ${lv.burst}${lv.boss ? '  BOSS' : ''}`;
 });

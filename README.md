@@ -9,7 +9,7 @@ A 2D arcade game for **YouTube Playables**, **Android**, **iPhone** and the web,
   <img src="docs/screenshots/boss-desktop.jpg" width="420" alt="Gigant Blob boss fight">
 </p>
 
-This is the **Phase 1 preview**. It includes Sector 1 (levels 1–20) with a mini boss on level 10 and the Gigant Blob on level 20, the Classic White suit, the full HUD, settings and your top runs. Sectors 2–5, the other suits and the weapons come next (see [Roadmap](#roadmap)).
+This release includes **Sector 1 (The Inner Ring, levels 1–20)** and **Sector 2 (Asteroid Belt, levels 21–40)** with low friction, Armored Beetles, Irregular Rocks, mini-bosses (L10 & L30) and full Sector Bosses (Gigant Blob on L20 and Rock Golem on L40), the Classic White suit, the full HUD, settings and your top runs. Sectors 3–5, the other suits and weapons come next (see [Roadmap](#roadmap)).
 
 ## Play it
 
@@ -64,7 +64,7 @@ The game is built to meet every MUST in the [Playables certification requirement
 | Touch, mouse (and keyboard) for everything; Esc closes dialogs without `preventDefault` | on-screen D-pad and buttons for all actions | smoke test (mouse-only play) |
 | Sharp text and graphics at every density | sprites AI-upscaled from your sheets and drawn at or below their pixel size; canvas at full device resolution | smoke test (fails if anything is drawn more than 1.15× its size) |
 | Chrome/Edge, Firefox, YouTube Android/iOS apps | YouTube checks run on Chromium, Firefox and WebKit | CI |
-| Haptics toggle; end-of-content message; no exit button, sharing, links, ads, purchases, names or text entry | Settings has a Vibration switch; level 20 says more is coming | smoke test / review |
+| Haptics toggle; end-of-content message; no exit button, sharing, links, ads, purchases, names or text entry | Settings has a Vibration switch; level 40 says more is coming | smoke test / review |
 
 Your listing text, genre, content notes, thumbnails and accessibility tags are ready to paste in [docs/youtube-listing.md](docs/youtube-listing.md).
 

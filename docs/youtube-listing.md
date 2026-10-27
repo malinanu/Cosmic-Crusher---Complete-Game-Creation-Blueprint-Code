@@ -27,12 +27,12 @@ Aliens are landing on your moon, and you have no blaster. All you have is the pl
 **What's in it:**
 - **Momentum:** build speed, chain crushes into combos up to X8 and fill the Super Bar.
 - **SHIELD/CRUSH:** while it's active, everything you touch is flattened.
-- **BOOST:** leap over the boss's goo and SLAM down to crush a whole crowd at once.
 - **Planets:** swap between heavy Mars, balanced Earth and the fast, slippery Moon mid-level.
-- **Enemies:** hopping Lunar Bouncers and armored Spiky Rollers.
-- **Bosses:** the Gigant Blob on levels 10 and 20.
+- **Enemies:** hopping Lunar Bouncers, armored Spiky Rollers, and tough Armored Beetles.
+- **Obstacles:** irregular surface rocks in the Asteroid Belt to leap over or slam through.
+- **Bosses:** the Gigant Blob (levels 10 and 20) and the Rock Golem (levels 30 and 40).
 
-Sector 1 has 20 levels, with 3 stars to earn on each: clear the level, keep at least half your health, and beat its target score. More sectors are on the way.
+Sectors 1 & 2 offer 40 levels, with 3 stars to earn on each: clear the level, keep at least half your health, and beat its target score (120 stars total). More sectors are on the way.
 
 **Controls:**
 - **Touch:** D-pad or drag to spin; BOOST/SLAM and SHIELD/CRUSH buttons.

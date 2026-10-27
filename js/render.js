@@ -236,11 +236,44 @@
       { x: w * 0.9, y: h * 0.72, s: 0.065, rot: 1, vr: -0.003, vx: -0.04, vy: -0.02 },
       { x: w * 0.78, y: h * 0.78, s: 0.025, rot: 2, vr: 0.006, vx: -0.03, vy: 0.03 }
     ];
+    this.beltRocks = [
+      { x: w * 0.08, y: h * 0.22, s: 0.055, rot: 0.2, vr: 0.005, vx: 0.07, vy: 0.025 },
+      { x: w * 0.25, y: h * 0.35, s: 0.035, rot: 1.1, vr: -0.006, vx: 0.05, vy: 0.02 },
+      { x: w * 0.42, y: h * 0.48, s: 0.07, rot: 2.3, vr: 0.003, vx: 0.06, vy: 0.03 },
+      { x: w * 0.65, y: h * 0.62, s: 0.045, rot: 0.8, vr: -0.004, vx: 0.08, vy: 0.035 },
+      { x: w * 0.85, y: h * 0.75, s: 0.065, rot: 3.1, vr: 0.005, vx: 0.05, vy: 0.02 },
+      { x: w * 0.92, y: h * 0.30, s: 0.03, rot: 1.5, vr: -0.007, vx: -0.04, vy: -0.015 },
+      { x: w * 0.15, y: h * 0.80, s: 0.04, rot: 2.8, vr: 0.004, vx: 0.06, vy: -0.02 }
+    ];
   };
 
-  Background.prototype.draw = function (ctx, t, drift, farPlanet) {
+  Background.prototype.draw = function (ctx, t, drift, farPlanet, sectorId) {
     var w = this.w, h = this.h;
     ctx.drawImage(this.nebula, 0, 0, w, h);
+
+    if (sectorId === 2) {
+      // Asteroid belt dust band
+      ctx.save();
+      var dg = ctx.createLinearGradient(0, h * 0.05, w, h * 0.95);
+      dg.addColorStop(0, 'rgba(180, 110, 50, 0)');
+      dg.addColorStop(0.35, 'rgba(215, 135, 65, 0.12)');
+      dg.addColorStop(0.5, 'rgba(245, 165, 80, 0.18)');
+      dg.addColorStop(0.65, 'rgba(215, 135, 65, 0.12)');
+      dg.addColorStop(1, 'rgba(180, 110, 50, 0)');
+      ctx.fillStyle = dg;
+      ctx.fillRect(0, 0, w, h);
+
+      // Belt stardust specks
+      for (var bi = 0; bi < 24; bi++) {
+        var bu = (bi * 0.042 + t * 0.0003) % 1;
+        var bx = bu * w;
+        var by = h * 0.05 + bu * (h * 0.9) + Math.sin(bi * 1.7 + t * 0.01) * (h * 0.08);
+        ctx.fillStyle = 'rgba(255, 210, 150, ' + (0.3 + 0.3 * Math.sin(bi + t * 0.03)) + ')';
+        ctx.fillRect(bx, by, 1.5, 1.5);
+      }
+      ctx.restore();
+    }
+
     var speeds = [0.04, 0.1, 0.18];
     for (var i = 0; i < this.stars.length; i++) {
       var s = this.stars[i];
@@ -260,8 +293,9 @@
       var fx = w * 0.82, fy = h * (w > h ? 0.3 : 0.24), fr = m * 0.09;
       drawPlanet(ctx, farPlanet, fx, fy, fr, t * 0.002, farPlanet === 'earth' ? '#5fb8ff' : '#cfd8ff');
     }
-    for (i = 0; i < this.rocks.length; i++) {
-      var r = this.rocks[i];
+    var rocks = sectorId === 2 ? this.beltRocks : this.rocks;
+    for (i = 0; i < rocks.length; i++) {
+      var r = rocks[i];
       var rx = ((r.x + r.vx * t) % (w + 100) + w + 100) % (w + 100) - 50;
       var ry = ((r.y + r.vy * t) % (h + 100) + h + 100) % (h + 100) - 50;
       ctx.save();

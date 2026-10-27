@@ -48,7 +48,14 @@
       // drag = share of spin kept after rolling one flat
       crawler: { size: 0.42, walk: 0.0032, damage: 10, score: 100, drag: 0.95 },
       bouncer: { size: 0.4, walk: 0.0045, damage: 8, score: 150, drag: 0.95, hopFrames: 70, hopHeight: 0.42 },
-      roller:  { size: 0.36, walk: 0.0060, damage: 12, score: 200, drag: 0.88, armor: 1.5 }
+      roller:  { size: 0.36, walk: 0.0060, damage: 12, score: 200, drag: 0.88, armor: 1.5 },
+      beetle:  { size: 0.44, walk: 0.0028, damage: 15, score: 250, drag: 0.82, armor: 1.8 }
+    },
+
+    rocks: {
+      size: 0.28,
+      bumpDrag: 0.35,
+      score: 150
     },
 
     boss: {
@@ -59,6 +66,14 @@
         gooEvery: [260, 170],   // frames between goo volleys (calm, enraged)
         spawnEvery: [420, 300],
         gooDamage: 12, gooFlight: 70
+      },
+      rockgolem: {
+        name: 'ROCK GOLEM', size: 0.92, hp: 26, creep: 0.0022, damage: 30,
+        hitSpeed: 1.35,
+        knockback: 1.3, stunFrames: 55,
+        gooEvery: [230, 150],   // boulder flings
+        spawnEvery: [380, 260],
+        gooDamage: 15, gooFlight: 65
       }
     },
 
@@ -69,7 +84,7 @@
     // strong run scores: crowds of aliens make longer combos, so crush points
     // per alien grow with burst × (comboBase + comboPerAlive × maxAlive),
     // fitted with a balance bot over all 20 levels.
-    stars: { health: 0.5, comboBase: 0.82, comboPerAlive: 0.072, clearHealth: 0.75 },
+    stars: { health: 0.5, comboBase: 0.82, comboPerAlive: 0.072, clearHealth: 0.75, sector2: { base: 4.75, perLevel: 0.045 } },
 
     score: {
       slamMultiplier: 1.5,

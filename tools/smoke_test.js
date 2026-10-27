@@ -143,9 +143,9 @@ async function run(browser, base, label, viewport, touch) {
         locked: document.querySelectorAll('#levelList .level-tile:disabled').length,
         total: document.getElementById('starTotal').textContent
       }));
-      check(lv.tiles === 20, 'sector 1 shows 20 level tiles');
-      check(lv.next.join() === '1' && lv.locked === 19, `level 1 is marked to play next, the rest are locked (next ${lv.next}, locked ${lv.locked})`);
-      check(lv.total === '★ 0 / 60', `level select shows the star total (${lv.total})`);
+      check(lv.tiles === 40, 'sectors 1 & 2 show 40 level tiles');
+      check(lv.next.join() === '1' && lv.locked === 39, `level 1 is marked to play next, the rest are locked (next ${lv.next}, locked ${lv.locked})`);
+      check(lv.total === '★ 0 / 120', `level select shows the star total (${lv.total})`);
     }
     await page.click(`#${id} [data-back]`);
     await page.waitForSelector('#menu.show');
@@ -221,7 +221,7 @@ async function run(browser, base, label, viewport, touch) {
     next: [...document.querySelectorAll('#levelList .level-tile.next .num')].map((n) => n.textContent).join(),
     total: document.getElementById('starTotal').textContent
   }));
-  check(map.l1 === 3 && map.next === '2' && map.total === '★ 3 / 60', `level map shows the stars and moves on to level 2 (L1 ${map.l1}★, next ${map.next}, ${map.total})`);
+  check(map.l1 === 3 && map.next === '2' && map.total === '★ 3 / 120', `level map shows the stars and moves on to level 2 (L1 ${map.l1}★, next ${map.next}, ${map.total})`);
   await shot(page, label + '_07b_levels');
   await page.click('#levels [data-back]');
   await page.waitForSelector('#menu.show');
@@ -600,7 +600,9 @@ async function runViewports(browser, base) {
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  execFileSync('python3', [path.join(__dirname, 'build.py'), 'all'], { stdio: 'inherit' });
+  const py = process.platform === 'win32' ? 'py' : 'python3';
+  const pyArgs = process.platform === 'win32' ? ['-3.12', path.join(__dirname, 'build.py'), 'all'] : [path.join(__dirname, 'build.py'), 'all'];
+  execFileSync(py, pyArgs, { stdio: 'inherit' });
   const dev = await serve(ROOT);
   const ytDir = path.join(ROOT, 'dist', 'youtube');
   const ytServer = await serve(ytDir, { 'Content-Security-Policy': YT_CSP });

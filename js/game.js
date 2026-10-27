@@ -83,6 +83,7 @@
     var A = CC.config.astronaut;
     this.aliens = [];
     this.goos = [];
+    this.rocks = [];
     this.boss = null;
     this.fx.clear();
     this.health = A.maxHealth;
@@ -133,6 +134,21 @@
     this.drive = 0;
     this.state = 'intro';
     this.stateTimer = 110;
+    this.rocks = [];
+    if (this.level.level >= 21) {
+      var rockCount = Math.min(5, 2 + Math.floor((this.level.level - 21) / 5));
+      for (var ri = 0; ri < rockCount; ri++) {
+        var baseA = (ri / rockCount) * TAU + 0.35;
+        while (Math.abs(wrap(baseA - TOP)) < 0.75) {
+          baseA = (baseA + 0.6) % TAU;
+        }
+        this.rocks.push({
+          local: baseA - this.angle,
+          size: CC.config.rocks.size,
+          bumpCooldown: 0
+        });
+      }
+    }
     this.banner = {
       title: 'LEVEL ' + this.level.level, sub: this.level.boss ? 'BOSS LEVEL' : 'WAVE 1 / ' + this.level.waves.length,
       goal: '★★★ ' + this.level.target.toLocaleString('en-US') + ' PTS'
@@ -162,8 +178,9 @@
     var dir = this.stumble > 0 || this.state === 'lost' ? 0 : input.dir;
     if (superOn && Math.abs(dir) < 0.1) dir = this.facing; // super keeps you rolling
     this.drive += (dir - this.drive) * cfg.inputEase;
+    var fScale = (this.level && this.level.physics && this.level.physics.frictionScale) || 1;
     var accel = P.accel * (superOn ? 1.4 : 1);
-    var friction = superOn ? Math.max(P.friction, 0.985) : P.friction;
+    var friction = superOn ? Math.max(P.friction, 0.985) : Math.min(0.992, P.friction * fScale);
     this.omega = (this.omega - this.drive * accel) * friction;
     var max = P.maxSpin * (superOn ? 1.15 : 1);
     if (this.omega > max) this.omega = max;
@@ -212,6 +229,7 @@
     this.stepState();
 
     // --- entities ---
+    this.updateRocks();
     this.updateAliens();
     if (this.boss) this.updateBoss();
     this.updateGoos();
@@ -389,6 +407,14 @@
         hit++;
       }
     }
+    if (this.rocks) {
+      for (var ri = this.rocks.length - 1; ri >= 0; ri--) {
+        var rk = this.rocks[ri];
+        if (Math.abs(wrap(rk.local + this.angle - TOP)) < arc + rk.size * 0.35) {
+          this.breakRock(rk, 'slam');
+        }
+      }
+    }
     var b = this.boss;
     if (b && b.state === 'landed' && b.invuln === 0 && Math.abs(wrap(b.local + this.angle - TOP)) < arc + b.halfArc()) {
       this.hitBoss(hard ? 2 : 1, wrap(b.local + this.angle - TOP) >= 0 ? 1 : -1, 1.0);
@@ -448,6 +474,27 @@
           this.hurt(a.cfg.damage, 'BONK!');
         }
         a.knockBack(this.angle, side);
+        continue;
+      }
+      if (a.type === 'beetle') {
+        if (this.superTime > 0) { this.crush(a, 'roll'); continue; }
+        var hardNeed = this.crushNeed(a.cfg.armor);
+        var baseNeed = this.crushNeed(1.0);
+        if (speed >= hardNeed || a.flipped) {
+          this.crush(a, 'roll');
+          if (this.superTime === 0) this.omega *= a.cfg.drag;
+        } else if (speed >= baseNeed) {
+          a.flipped = true;
+          a.stun = 150;
+          this.omega *= 0.75;
+          var bp = this.surfaceXY(a.local + this.angle, a.height + 0.15);
+          this.fx.pop('FLIPPED!', bp.x, bp.y, this.R * 0.16, 'info', { max: 40 });
+          this.addShake(4);
+          this.emit('flip');
+        } else if (a.stun === 0 || Math.abs(d) < footArc) {
+          if (this.hurt(a.cfg.damage, 'OUCH!')) this.omega *= 0.6;
+          a.knockBack(this.angle, side);
+        }
         continue;
       }
       var need = this.crushNeed(a.cfg.armor);
@@ -547,7 +594,8 @@
     if (ev === 'goo') this.fireGoo(b.enraged() ? 3 : 2);
     if (ev === 'spawn') {
       var wa = b.local + this.angle;
-      for (var k = 0; k < 2; k++) this.spawnAlien('crawler', wa + (k ? 0.5 : -0.5), true);
+      var minionType = b.kind === 'rockgolem' ? 'beetle' : 'crawler';
+      for (var k = 0; k < 2; k++) this.spawnAlien(minionType, wa + (k ? 0.5 : -0.5), true);
     }
 
     var d = wrap(b.local + this.angle - TOP);
@@ -572,7 +620,7 @@
     b.flash = 12;
     b.squash = 1;
     var p = b.surfacePoint(this, this.R, b.width * 0.35);
-    this.fx.splat(p.x, p.y, '#ff5a2e', 1.4);
+    this.fx.splat(p.x, p.y, b.kind === 'rockgolem' ? '#ff7722' : '#ff5a2e', 1.4);
     this.fx.sparks(p.x, p.y, '#ffe08a', 14);
     this.fx.pop('CRUSH!', p.x, p.y - this.R * 0.35, this.R * 0.24, 'boss', { max: 55 });
     this.score += CC.config.score.bossHit * dmg;
@@ -594,10 +642,11 @@
   Game.prototype.fireGoo = function (n) {
     var b = this.boss;
     var C = b.cfg;
+    var kind = b.kind === 'rockgolem' ? 'boulder' : 'goo';
     for (var i = 0; i < n; i++) {
       var from = b.surfacePoint(this, this.R, b.width * 0.55);
       var to = { x: this.cx + (Math.random() - 0.5) * this.R * 0.12, y: this.cy - this.R - this.R * 0.18 };
-      var g = new E.Goo(from, to, C.gooFlight + i * 14, this.R * (0.9 + Math.random() * 0.4));
+      var g = new E.Goo(from, to, C.gooFlight + i * 14, this.R * (0.9 + Math.random() * 0.4), kind);
       this.goos.push(g);
     }
     this.emit('goo');
@@ -608,13 +657,82 @@
       var g = this.goos[i];
       if (g.update() === 'hit') {
         this.goos.splice(i, 1);
-        this.fx.splat(g.to.x, g.to.y, '#7dff4a', 0.8);
-        if (!this.airborne()) this.hurt(this.boss ? this.boss.cfg.gooDamage : 10, 'SPLAT!');
+        if (g.kind === 'boulder') {
+          this.fx.dust(g.to.x, g.to.y, -1.5, -1, '#8f8899');
+          this.fx.dust(g.to.x, g.to.y, 1.5, -1, '#ff8822');
+          this.fx.sparks(g.to.x, g.to.y, '#ffe08a', 8);
+          if (!this.airborne()) this.hurt(this.boss ? this.boss.cfg.gooDamage : 15, 'BOULDER!');
+        } else {
+          this.fx.splat(g.to.x, g.to.y, '#7dff4a', 0.8);
+          if (!this.airborne()) this.hurt(this.boss ? this.boss.cfg.gooDamage : 10, 'SPLAT!');
+        }
       } else if (this.t % 2 === 0) {
         var p = g.pos();
-        this.fx.dust(p.x, p.y, 0, 0, 'rgba(125,255,74,0.5)');
+        if (g.kind === 'boulder') {
+          this.fx.dust(p.x, p.y, 0, 0, 'rgba(255,140,50,0.5)');
+        } else {
+          this.fx.dust(p.x, p.y, 0, 0, 'rgba(125,255,74,0.5)');
+        }
       }
     }
+  };
+
+  Game.prototype.updateRocks = function () {
+    if (!this.rocks || !this.rocks.length) return;
+    var A = CC.config.astronaut;
+    var footArc = A.footArc;
+    var speed = Math.abs(this.omega);
+    var air = this.airborne();
+    for (var i = this.rocks.length - 1; i >= 0; i--) {
+      var r = this.rocks[i];
+      if (r.bumpCooldown > 0) r.bumpCooldown--;
+      var d = wrap(r.local + this.angle - TOP);
+      var halfArc = r.size * 0.35;
+      if (!(Math.abs(d) < footArc + halfArc)) continue;
+      if (air || this.state === 'lost' || this.state === 'won') continue;
+
+      if (this.superTime > 0) {
+        this.breakRock(r, 'super');
+        continue;
+      }
+
+      if (r.bumpCooldown === 0 && speed > 0.003) {
+        r.bumpCooldown = 30;
+        this.omega *= CC.config.rocks.bumpDrag;
+        var p = this.surfaceXY(r.local + this.angle, 0.1);
+        this.fx.pop('BUMP!', p.x, p.y, this.R * 0.16, 'info', { max: 35 });
+        this.fx.dust(p.x, p.y, this.omega > 0 ? 2 : -2, -0.6, '#b0a8ba');
+        this.addShake(CC.config.shake.crush);
+        this.emit('bump');
+      }
+    }
+  };
+
+  Game.prototype.breakRock = function (r, how) {
+    var idx = this.rocks.indexOf(r);
+    if (idx >= 0) this.rocks.splice(idx, 1);
+    var p = this.surfaceXY(r.local + this.angle, 0.12);
+    this.fx.dust(p.x, p.y, -1.5, -1, '#8f8899');
+    this.fx.dust(p.x, p.y, 1.5, -1, '#c0b8cc');
+    this.fx.dust(p.x, p.y, 0, -1.8, '#ded8e8');
+    this.fx.pop('SMASH!', p.x, p.y - this.R * 0.15, this.R * 0.18, 'splat');
+    this.addShake(CC.config.shake.crush);
+    var pts = CC.config.rocks.score * (how === 'slam' ? CC.config.score.slamMultiplier : 1);
+    this.score += pts;
+    this.emit('rockBreak');
+  };
+
+  Game.prototype.drawRock = function (ctx, rock, R) {
+    var wa = rock.local + this.angle;
+    var p = this.surfaceXY(wa, 0);
+    var rw = rock.size * R;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(wa + Math.PI / 2);
+    if (!CC.assets.drawFeet(ctx, 'prop_rock', rw, false)) {
+      CC.assets.drawFallbackRock(ctx, rw);
+    }
+    ctx.restore();
   };
 
   Game.prototype.addShake = function (amt) {
@@ -702,7 +820,7 @@
     }
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     var far = this.planetKey === 'earth' ? 'moon' : 'earth';
-    this.bg.draw(ctx, this.t, Math.abs(this.omega), far);
+    this.bg.draw(ctx, this.t, Math.abs(this.omega), far, this.level && this.level.sector ? this.level.sector.id : 1);
 
     ctx.save();
     if (this.shakeAmt > 0.3) {
@@ -712,6 +830,9 @@
     CC.render.drawPlanet(ctx, this.planetKey, this.cx, this.cy, R, this.angle, this.planet.glow);
 
     var i;
+    if (this.rocks) {
+      for (i = 0; i < this.rocks.length; i++) this.drawRock(ctx, this.rocks[i], R);
+    }
     for (i = 0; i < this.aliens.length; i++) this.aliens[i].draw(ctx, this, R);
     if (this.boss) this.boss.draw(ctx, this, R);
     this.drawAstronaut(ctx);

@@ -17,8 +17,8 @@
 
   var KEYS = [
     'astro_idle', 'astro_run1', 'astro_run2', 'astro_run3', 'astro_leap', 'astro_splat',
-    'fx_shield', 'alien_crawler', 'alien_bouncer', 'alien_roller', 'boss_blob',
-    'icon_boost', 'icon_shield', 'icon_trophy', 'icon_suit_white', 'logo', 'prop_asteroid',
+    'fx_shield', 'alien_crawler', 'alien_bouncer', 'alien_roller', 'alien_beetle', 'boss_blob', 'boss_golem',
+    'icon_boost', 'icon_shield', 'icon_trophy', 'icon_suit_white', 'logo', 'prop_asteroid', 'prop_rock',
     // Optional: cut from the moon / Mars mockups once they are in art/.
     'alien_cute_green', 'alien_cute_orange', 'alien_cute_pink', 'alien_cute_blue', 'alien_cute_yellow',
     'prop_earth', 'planet_moon', 'planet_earth', 'planet_mars'
@@ -199,6 +199,89 @@
     ctx.restore();
   }
 
+  function drawFallbackBeetle(ctx, w, t, squash, flipped) {
+    ctx.save();
+    var r = w * 0.42;
+    var cy = -r * 0.9;
+    ctx.translate(0, cy);
+    if (flipped) ctx.scale(1, -1);
+    ctx.fillStyle = '#1c1538'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = Math.max(2, w * 0.04);
+    // Legs
+    [-1, 1].forEach(function (side) {
+      for (var i = 0; i < 3; i++) {
+        var lx = side * (r * 0.6 + i * r * 0.2);
+        var ly = (i - 1) * r * 0.35 + (flipped ? Math.sin(t * 0.25 + i) * r * 0.15 : 0);
+        ctx.beginPath();
+        ctx.moveTo(side * r * 0.4, ly * 0.5);
+        ctx.lineTo(lx, ly);
+        ctx.lineTo(lx + side * r * 0.2, ly + r * 0.3);
+        ctx.stroke();
+      }
+    });
+    // Carapace shell
+    var grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 1.1);
+    grad.addColorStop(0, '#2ee6d6'); grad.addColorStop(0.5, '#2e49a8'); grad.addColorStop(1, '#191b48');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.95, r * 0.75, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Center shell seam
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.75); ctx.lineTo(0, r * 0.75); ctx.stroke();
+    // Glowing neon lines
+    ctx.strokeStyle = '#38ffea'; ctx.lineWidth = Math.max(1.5, w * 0.025);
+    ctx.beginPath(); ctx.arc(-r * 0.35, 0, r * 0.3, -0.6 * Math.PI, 0.6 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(r * 0.35, 0, r * 0.3, 0.4 * Math.PI, 1.6 * Math.PI); ctx.stroke();
+    // Eyes
+    ctx.fillStyle = '#ffff66';
+    ctx.beginPath(); ctx.arc(-r * 0.4, -r * 0.4, r * 0.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(r * 0.4, -r * 0.4, r * 0.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFallbackGolem(ctx, w, t, squash) {
+    ctx.save();
+    var s = w * 0.5;
+    ctx.translate(0, -s * 0.9);
+    ctx.fillStyle = '#4a3f3b'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = Math.max(3, w * 0.035);
+    // Craggy shoulders
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.8, -s * 0.4); ctx.lineTo(-s * 0.6, -s * 0.8); ctx.lineTo(-s * 0.2, -s * 0.6);
+    ctx.lineTo(s * 0.2, -s * 0.6); ctx.lineTo(s * 0.6, -s * 0.8); ctx.lineTo(s * 0.8, -s * 0.4);
+    ctx.lineTo(s * 0.7, s * 0.3); ctx.lineTo(s * 0.3, s * 0.7); ctx.lineTo(-s * 0.3, s * 0.7);
+    ctx.lineTo(-s * 0.7, s * 0.3); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Magma fissures
+    ctx.strokeStyle = '#ff9922'; ctx.lineWidth = Math.max(2, w * 0.025);
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.4, -s * 0.2); ctx.lineTo(0, 0); ctx.lineTo(-s * 0.2, s * 0.4);
+    ctx.moveTo(0, 0); ctx.lineTo(s * 0.3, -s * 0.1); ctx.lineTo(s * 0.2, s * 0.4);
+    ctx.stroke();
+    // Glowing eyes & mouth
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath(); ctx.ellipse(-s * 0.2, -s * 0.3, s * 0.1, s * 0.06, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s * 0.2, -s * 0.3, s * 0.1, s * 0.06, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s * 0.15, s * 0.1); ctx.lineTo(0, s * 0.25); ctx.lineTo(s * 0.15, s * 0.1); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFallbackRock(ctx, w) {
+    ctx.save();
+    var r = w * 0.45;
+    ctx.fillStyle = '#7a7082'; ctx.strokeStyle = OUTLINE; ctx.lineWidth = Math.max(2, w * 0.04);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.8, -r * 0.2); ctx.lineTo(-r * 0.5, -r * 0.8); ctx.lineTo(r * 0.3, -r * 0.9);
+    ctx.lineTo(r * 0.85, -r * 0.3); ctx.lineTo(r * 0.7, r * 0.7); ctx.lineTo(-r * 0.2, r * 0.85);
+    ctx.lineTo(-r * 0.8, r * 0.5); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Shading facet
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, -r * 0.8); ctx.lineTo(r * 0.3, -r * 0.9); ctx.lineTo(0, -r * 0.1); ctx.lineTo(-r * 0.4, -r * 0.2);
+    ctx.closePath(); ctx.fill();
+    // Crater
+    ctx.fillStyle = '#4b4354';
+    ctx.beginPath(); ctx.ellipse(r * 0.2, r * 0.2, r * 0.25, r * 0.18, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   CC.assets = {
     upscale: upscale,
     keys: KEYS,
@@ -210,6 +293,9 @@
     cuteColors: CUTE_KEYS,
     drawCuteAlien: drawCuteAlien,
     drawAstronaut: drawAstronaut,
+    drawFallbackBeetle: drawFallbackBeetle,
+    drawFallbackGolem: drawFallbackGolem,
+    drawFallbackRock: drawFallbackRock,
     OUTLINE: OUTLINE
   };
 })(window.CC = window.CC || {});

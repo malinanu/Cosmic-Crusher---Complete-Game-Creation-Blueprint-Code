@@ -16,7 +16,8 @@
 
   var GOO = {
     green: '#6be04f', orange: '#ff9a3c', pink: '#f070c8', blue: '#7f9bff', yellow: '#ffd23f',
-    plutonian: '#7ed957', bouncer: '#b06bff', roller: '#ff8a2a', blob: '#ff5a2e'
+    plutonian: '#7ed957', bouncer: '#b06bff', roller: '#ff8a2a', blob: '#ff5a2e',
+    beetle: '#2ee6d6', rockgolem: '#ff7722'
   };
 
   // ---- Aliens -------------------------------------------------------------
@@ -38,6 +39,7 @@
     this.rest = 0;
     this.stun = 0;
     this.spin = 0;
+    this.flipped = false;
     this.t = Math.random() * 1000;
     this.warp = 0;
     this.squash = 0;
@@ -154,6 +156,16 @@
       if (!A.drawCentered(ctx, 'alien_roller', w)) fallbackBall(ctx, w, '#ff8a2a', true);
       return;
     }
+    if (a.type === 'beetle') {
+      var flipY = a.flipped ? -1 : 1;
+      ctx.scale(1, flipY);
+      if (a.flipped) {
+        // wriggling little feet when flipped on back
+        ctx.rotate(Math.sin(a.t * 0.2) * 0.08);
+      }
+      if (!A.drawFeet(ctx, 'alien_beetle', w * 0.95, flip)) A.drawFallbackBeetle(ctx, w, a.t, a.squash, a.flipped);
+      return;
+    }
     if (a.type === 'bouncer') {
       if (!A.drawFeet(ctx, 'alien_bouncer', w * 0.95, flip)) A.drawCuteAlien(ctx, w, 'pink', a.t, a.squash);
       return;
@@ -262,21 +274,26 @@
     var k = this.state === 'dying' ? Math.max(0, 1 - this.dying / 90) : 1;
     ctx.scale((1 + wob + sq) * k, (1 - wob - sq) * (this.state === 'dying' ? k * k : 1));
     if (this.invuln > 0 && this.invuln % 10 < 5) ctx.globalAlpha = 0.75;
+    var spriteKey = this.kind === 'rockgolem' ? 'boss_golem' : 'boss_blob';
     var flip = this.moveDir > 0;
-    if (!CC.assets.drawFeet(ctx, 'boss_blob', w * 0.82, flip)) CC.assets.drawCuteAlien(ctx, w, 'orange', this.t, this.squash);
+    if (!CC.assets.drawFeet(ctx, spriteKey, w * 0.82, flip)) {
+      if (this.kind === 'rockgolem') CC.assets.drawFallbackGolem(ctx, w, this.t, this.squash);
+      else CC.assets.drawCuteAlien(ctx, w, 'orange', this.t, this.squash);
+    }
     if (this.flash > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = this.flash / 12;
-      CC.assets.drawFeet(ctx, 'boss_blob', w * 0.82, flip);
+      CC.assets.drawFeet(ctx, spriteKey, w * 0.82, flip);
     }
     ctx.restore();
   };
 
   // ---- Goo shot (boss projectile) ----------------------------------------------
 
-  function Goo(from, to, flight, arc) {
+  function Goo(from, to, flight, arc, kind) {
     this.from = from; this.to = to;
     this.flight = flight; this.arc = arc;
+    this.kind = kind || 'goo';
     this.t = 0;
     this.done = false;
   }
@@ -296,19 +313,44 @@
     var p = this.pos();
     var r = R * 0.09;
     ctx.save();
-    // target marker on the astronaut
     var k = this.t / this.flight;
-    ctx.strokeStyle = 'rgba(140,255,90,' + (0.3 + 0.5 * k) + ')';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(this.to.x, this.to.y, r * (2.4 - k * 1.2), 0, TAU); ctx.stroke();
-    var gg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2);
-    gg.addColorStop(0, 'rgba(160,255,90,0.6)'); gg.addColorStop(1, 'rgba(160,255,90,0)');
-    ctx.fillStyle = gg;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r * 2, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#7dff4a'; ctx.strokeStyle = '#1f5a12'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.beginPath(); ctx.arc(p.x - r * 0.3, p.y - r * 0.35, r * 0.3, 0, TAU); ctx.fill();
+    if (this.kind === 'boulder') {
+      // target marker on astronaut in fiery orange
+      ctx.strokeStyle = 'rgba(255,140,50,' + (0.35 + 0.55 * k) + ')';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(this.to.x, this.to.y, r * (2.4 - k * 1.2), 0, TAU); ctx.stroke();
+      // spinning jagged boulder
+      ctx.translate(p.x, p.y);
+      ctx.rotate(this.t * 0.15);
+      var br = r * 1.1;
+      ctx.fillStyle = '#4a3f3b'; ctx.strokeStyle = CC.assets.OUTLINE; ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (var bi = 0; bi < 8; bi++) {
+        var ba = bi / 8 * TAU;
+        var bdist = br * (0.8 + (bi % 2 ? 0.35 : -0.1));
+        var bx = Math.cos(ba) * bdist, by = Math.sin(ba) * bdist;
+        if (bi === 0) ctx.moveTo(bx, by); else ctx.lineTo(bx, by);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // fiery magma core/seams
+      ctx.fillStyle = '#ff8822';
+      ctx.beginPath(); ctx.arc(0, 0, br * 0.35, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffea66';
+      ctx.beginPath(); ctx.arc(-br * 0.1, -br * 0.1, br * 0.18, 0, TAU); ctx.fill();
+    } else {
+      // target marker on the astronaut
+      ctx.strokeStyle = 'rgba(140,255,90,' + (0.3 + 0.5 * k) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.to.x, this.to.y, r * (2.4 - k * 1.2), 0, TAU); ctx.stroke();
+      var gg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2);
+      gg.addColorStop(0, 'rgba(160,255,90,0.6)'); gg.addColorStop(1, 'rgba(160,255,90,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * 2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#7dff4a'; ctx.strokeStyle = '#1f5a12'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.arc(p.x - r * 0.3, p.y - r * 0.35, r * 0.3, 0, TAU); ctx.fill();
+    }
     ctx.restore();
   };
 
