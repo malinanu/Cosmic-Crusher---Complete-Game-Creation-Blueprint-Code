@@ -31,7 +31,6 @@
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('show', s.id === id); });
     current = id;
     if (id === 'levels') renderLevels();
-    if (id === 'leaderboard') renderLeaderboard();
     if (id === 'settings') renderSettings();
   }
 
@@ -104,7 +103,7 @@
 
   // Esc / Android back: close the open screen, or pause a running level.
   // Returns false at the main menu so the app can exit there.
-  var CLOSABLE = { levels: 1, settings: 1, leaderboard: 1, weapons: 1 };
+  var CLOSABLE = { levels: 1, settings: 1, weapons: 1 };
   function escape() {
     if (current && CLOSABLE[current]) { back(); return true; }
     if (current === 'howto') { $('howtoGo').click(); return true; }
@@ -203,28 +202,6 @@
       list.appendChild(wrap);
     });
     if (nextTile) nextTile.scrollIntoView({ block: 'nearest' });
-  }
-
-  function renderLeaderboard() {
-    var d = CC.storage.data;
-    var ol = $('lbList');
-    ol.innerHTML = '';
-    if (!d.leaderboard.length) {
-      var li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = 'No runs yet. Go crush some aliens!';
-      ol.appendChild(li);
-    }
-    var latest = d.leaderboard.reduce(function (m, e) { return Math.max(m, e.date); }, 0);
-    d.leaderboard.forEach(function (e, i) {
-      var li = document.createElement('li');
-      var medal = ['gold', 'silver', 'bronze'][i] || '';
-      li.className = medal + (e.date === latest ? ' me' : '');
-      li.innerHTML = '<span class="rank-cell">' + (i < 3 ? '🏆' : (i + 1) + '.') + '</span>' +
-        '<span class="name">LEVEL ' + e.level + '</span><span class="pts">' + e.score.toLocaleString('en-US') + ' pts</span>';
-      ol.appendChild(li);
-    });
-    $('lbRank').textContent = d.leaderboard.length ? d.leaderboard[0].score.toLocaleString('en-US') : '—';
   }
 
   function ordinal(n) {

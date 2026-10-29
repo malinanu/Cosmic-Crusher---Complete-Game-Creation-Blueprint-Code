@@ -89,7 +89,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .screen.show { display: flex; animation: fadein 0.18s ease-out; }
 .screen.dim { background: rgba(4, 6, 20, 0.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-#levels, #settings, #leaderboard, #weapons, #howto { background: rgba(4, 6, 20, 0.55); }
+#levels, #settings, #weapons, #howto { background: rgba(4, 6, 20, 0.55); }
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
 .panel {
@@ -289,36 +289,6 @@ input[type=range]::-moz-range-thumb {
 .level-tile.next { border-color: var(--yellow); animation: nexttile 0.9s ease-in-out infinite alternate; scroll-margin: 14px; }
 .level-tile .play { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); font-size: 9px; padding: 2px 6px; border-radius: 6px; background: var(--yellow); color: #3a2400; }
 @keyframes nexttile { to { box-shadow: 0 3px 0 #0b2160, 0 0 16px rgba(255, 210, 63, 0.9), inset 0 2px 0 rgba(255, 255, 255, 0.3); } }
-
-/* ---------- Leaderboard ---------- */
-
-.tabs { display: flex; border-radius: 16px; overflow: hidden; border: 2px solid rgba(120, 190, 255, 0.5); position: absolute; top: -22px; left: 16px; right: 16px; }
-.tab { flex: 1; text-align: center; padding: 8px; font-size: 15px; background: #0e1f4a; }
-.tab.active { background: linear-gradient(180deg, #3d8bff, #1b4fc4); }
-.tab.disabled { color: var(--muted); font-size: 12px; }
-.lb-title { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 12px; }
-.lb-title span { font-family: var(--font-pop); font-size: 30px; line-height: 1; color: var(--yellow); text-shadow: 0 0 14px rgba(255, 190, 40, 0.7), 0 3px 0 #8a4a00; text-align: center; }
-.lb-title img { width: 64px; }
-.lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; touch-action: pan-y; }
-.lb-list li {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 2px solid var(--cyan);
-  background: rgba(8, 20, 56, 0.85);
-  box-shadow: 0 0 12px rgba(65, 216, 255, 0.4);
-  font-size: 16px;
-}
-.lb-list li.empty { justify-content: center; color: var(--muted); font-size: 14px; border-style: dashed; }
-.lb-list .rank-cell { width: 34px; text-align: center; font-size: 20px; }
-.lb-list .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-list .pts { color: #cfe8ff; }
-.lb-list li.gold .pts { color: var(--yellow); }
-.lb-list li.silver .pts { color: #dfe7f2; }
-.lb-list li.bronze .pts { color: #ffa25a; }
-.lb-list li.me { border-color: var(--yellow); box-shadow: 0 0 14px rgba(255, 210, 63, 0.6); }
-.lb-rank { margin-top: 12px; padding: 10px; text-align: center; border-radius: 14px; border: 2px solid var(--cyan); background: rgba(8, 20, 56, 0.85); font-size: 16px; color: var(--cyan); }
-.lb-rank .rank { font-family: var(--font-pop); font-size: 36px; color: var(--yellow); text-shadow: 0 2px 0 #8a4a00; }
 
 /* ---------- Weapons preview ---------- */
 

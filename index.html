@@ -9,6 +9,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="description" content="AstroSpin: spin the planet to crush alien invaders.">
   <title>AstroSpin</title>
+  <link rel="preload" href="fonts/luckiest-guy-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/russo-one-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -84,6 +86,8 @@
         </div>
       </div>
     </div>
+
+    <div class="hud-bl">
       <div class="gauge">
         <svg id="gauge" viewBox="0 0 200 118" role="img" aria-label="Roll speed gauge"></svg>
         <div class="gauge-label">ROLL SPEED</div>
@@ -138,7 +142,6 @@
       <div class="menu-buttons">
         <button class="btn btn-orange btn-big" data-action="start">START GAME</button>
         <button class="btn btn-green" data-go="weapons">WEAPONS UPGRADES</button>
-        <button class="btn btn-blue" data-go="leaderboard">LEADERBOARD</button>
       </div>
       <div class="menu-foot">Sectors 1 & 2 · 40 levels</div>
     </div>
@@ -193,19 +196,6 @@
         <div class="group-title">CREDITS</div>
         <p>Game design &amp; art: the AstroSpin team.<br>Code: HTML5 canvas, no plugins. Sound: synthesized live.</p>
       </div>
-    </div>
-    <button class="btn btn-red btn-back" data-back>BACK</button>
-  </div>
-
-  <div id="leaderboard" class="screen">
-    <div class="panel">
-      <div class="tabs"><span class="tab active">YOUR TOP RUNS</span></div>
-      <div class="lb-title">
-        <span>TOP COSMIC<br>CRUSHERS</span>
-        <img src="assets/sprites/icon_trophy.png" alt="" data-fallback="">
-      </div>
-      <ol id="lbList" class="lb-list"></ol>
-      <div class="lb-rank"><div>YOUR BEST:</div><div id="lbRank" class="rank">—</div></div>
     </div>
     <button class="btn btn-red btn-back" data-back>BACK</button>
   </div>

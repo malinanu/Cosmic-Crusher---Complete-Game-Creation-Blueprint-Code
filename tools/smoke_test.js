@@ -128,9 +128,9 @@ async function run(browser, base, label, viewport, touch) {
   check(await game(page, () => CC.game.mode === 'attract'), 'menu shows the attract-mode planet');
 
   const stack = await page.$$eval('#menu .menu-buttons button', (bs) => bs.map((b) => b.textContent.trim()));
-  check(stack.join('|') === 'START GAME|WEAPONS UPGRADES|LEADERBOARD', 'menu buttons: ' + stack.join(', '));
+  check(stack.join('|') === 'START GAME|WEAPONS UPGRADES', 'menu buttons: ' + stack.join(', '));
   for (const [sel, id, name] of [['#btnMenuSettings', 'settings', 'the ⚙ corner button'], ['#menu button:has-text("START GAME")', 'levels', 'START GAME'],
-    ['#menu button:has-text("LEADERBOARD")', 'leaderboard', 'LEADERBOARD'], ['#menu button:has-text("WEAPONS UPGRADES")', 'weapons', 'WEAPONS UPGRADES']]) {
+    ['#menu button:has-text("WEAPONS UPGRADES")', 'weapons', 'WEAPONS UPGRADES']]) {
     await page.click(sel);
     await page.waitForSelector(`#${id}.show`);
     await wait(page, 250);
@@ -225,10 +225,6 @@ async function run(browser, base, label, viewport, touch) {
   await shot(page, label + '_07b_levels');
   await page.click('#levels [data-back]');
   await page.waitForSelector('#menu.show');
-  await page.click('#menu button:has-text("LEADERBOARD")');
-  await wait(page, 300);
-  await shot(page, label + '_08_leaderboard');
-  check(await page.locator('#lbList li').count() === 1, 'leaderboard lists the saved score');
 
   // Losing
   await page.goto(base + '/index.html?level=2');

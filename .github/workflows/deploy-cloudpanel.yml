@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - sector-2
       - claude/intelligent-ramanujan-5xw0c8
   workflow_dispatch:
 

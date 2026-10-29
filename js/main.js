@@ -76,10 +76,10 @@
     var fonts = document.fonts && document.fonts.load ? Promise.all([
       document.fonts.load('40px "Luckiest Guy"'), document.fonts.load('20px "Russo One"')
     ]).catch(function () {}) : Promise.resolve();
-    var timeout = new Promise(function (r) { setTimeout(r, 2500); });
+    var timeout = new Promise(function (r) { setTimeout(r, 400); });
 
     // The loading screen is up (it is in the HTML from the start).
-    paintOrTimeout(50).then(function () {
+    paintOrTimeout(20).then(function () {
       P.firstFrameReady();
       return Promise.all([
         P.init().then(function () { return CC.storage.load(); }),
@@ -103,7 +103,7 @@
       }
       loop.start();
       // Interactive from here (main menu or a level).
-      return paintOrTimeout(50).then(P.gameReady);
+      return paintOrTimeout(20).then(P.gameReady);
     }).catch(function (err) {
       P.logError(err);
     });
