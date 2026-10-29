@@ -84,8 +84,10 @@
       var burst = 1 + Math.floor(L / 8);
       var maxAlive = 8 + Math.floor(L / 3);
       var mix = enemyMix(L);
+      var planet = L <= 10 ? 'moon' : L <= 20 ? 'earth' : 'mars';
       return {
         level: L,
+        planet: planet,
         sector: sector,
         physics: {
           frictionScale: sector.id === 2 ? 1.012 : 1.0

@@ -178,12 +178,10 @@ async function run(browser, base, label, viewport, touch) {
   check(await game(page, () => CC.game.superTime > 0), 'SHIELD/CRUSH activates when the bar is full');
   await shot(page, label + '_05_super');
 
-  // Planet switch
-  await page.keyboard.press('1');
-  await wait(page, 300);
-  check(await game(page, () => CC.game.planetKey === 'mars'), 'key 1 switches to Mars');
-  await page.click('#selector button[data-planet="earth"]');
-  check(await game(page, () => CC.game.planetKey === 'earth'), 'selector button switches to Earth');
+  // Planet progression
+  check(await game(page, () => CC.game.planetKey === 'moon'), 'level 1 starts on Moon');
+  await game(page, () => CC.game.setPlanet('earth'));
+  check(await game(page, () => CC.game.planetKey === 'earth'), 'planet changes to Earth');
 
   // Pause / resume
   await page.keyboard.press('p');
@@ -566,7 +564,7 @@ async function runViewports(browser, base) {
     const layout = await page.evaluate(() => {
       const g = CC.game;
       const rect = (sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { sel, x: r.left, y: r.top, r: r.right, b: r.bottom }; };
-      const blocks = ['.hud-tl', '.hud-tr', '#selector', '.hud-bl', '.hud-br', '#keyHint'].map(rect).filter((r) => r.r > r.x);
+      const blocks = ['.hud-tl', '.hud-tr', '.hud-bl', '.hud-br', '#keyHint'].map(rect).filter((r) => r.r > r.x);
       const ah = g.R * CC.config.astronaut.height;
       const astro = { sel: 'astronaut', x: g.cx - ah * 0.35, y: g.cy - g.R - ah, r: g.cx + ah * 0.35, b: g.cy - g.R };
       return { blocks, astro, w: innerWidth, h: innerHeight, canvasW: g.canvas.clientWidth, canvasH: g.canvas.clientHeight };

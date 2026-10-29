@@ -83,7 +83,8 @@
       return;
     }
     hideScreens();
-    game.setPlanet(d.planet || 'moon');
+    var lv = CC.levels.get(n);
+    game.setPlanet(lv.planet || 'moon');
     game.startLevel(n);
     CC.hud.show(true);
     CC.input.setEnabled(true);
@@ -458,14 +459,11 @@
       CC.storage.save();
       applySettings();
     });
-    document.querySelectorAll('#selector button').forEach(function (b) {
-      b.addEventListener('click', function () { game.setPlanet(b.getAttribute('data-planet')); });
-    });
 
     CC.input.on('pause', pauseGame);
     CC.input.on('escape', escape);
     CC.platform.onBack(function () { if (!escape()) CC.platform.exitApp(); });
-    CC.input.on('planet', function (key) { if (game.mode === 'level' && game.state !== 'paused') game.setPlanet(key); });
+    CC.input.on('planet', function (key) { if (CC.BUILD && CC.BUILD.dev && game.mode === 'level' && game.state !== 'paused') game.setPlanet(key); });
 
     document.body.classList.add('platform-' + CC.platform.id);
     if (!CC.platform.tiltAvailable) document.querySelector('.style-btn[data-controls="tilt"]').classList.add('hidden');

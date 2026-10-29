@@ -63,15 +63,6 @@
       </div>
     </div>
 
-    <div id="selector" class="selector" role="group" aria-label="Choose planet">
-      <div class="selector-label">OBJECT SELECTOR</div>
-      <div class="selector-row">
-        <button data-planet="mars" aria-label="Mars"><canvas width="96" height="96"></canvas></button>
-        <button data-planet="earth" aria-label="Earth"><canvas width="96" height="96"></canvas></button>
-        <button data-planet="moon" aria-label="Moon"><canvas width="96" height="96"></canvas></button>
-      </div>
-    </div>
-
     <div id="bossBar" class="boss-bar hidden">
       <div class="boss-label" id="bossName">BOSS HP</div>
       <div class="bar boss"><div id="bossFill" class="fill"></div></div>
@@ -107,7 +98,7 @@
       </button>
     </div>
 
-    <div id="keyHint" class="key-hint">← → / A D spin · ↑ boost · ↓ slam · SPACE super · 1 2 3 planet · P pause</div>
+    <div id="keyHint" class="key-hint">← → / A D spin · ↑ boost · ↓ slam · SPACE super · P pause</div>
   </div>
 
   <!-- ===================== SCREENS ===================== -->
@@ -217,13 +208,13 @@
         <li>Too slow and they hurt you. Watch the <b>ROLL SPEED</b> gauge: the white notch is crushing speed. Stay out of the red too long and you stumble.</li>
         <li><b>BOOST/SLAM</b> jumps; landing sends a shockwave that crushes anything nearby. Press again in the air to slam down fast. Dodge the boss's goo by jumping!</li>
         <li>Crushes fill the <b>SUPER BAR</b>. Then hit <b>SHIELD/CRUSH</b>: shield up and everything you touch is crushed.</li>
-        <li><b>Object Selector</b> swaps planets: Mars is heavy, Earth balanced, Moon fast and slippery.</li>
+        <li><b>Planets</b> progress as you advance: the Moon is fast and slippery, Earth balanced, and Mars heavy.</li>
         <li>Earn up to <b class="y">3 STARS</b>: clear the level, finish with at least half your health, and beat the level's target score (combos and slams help).</li>
       </ul>
       <div class="howto-keys" id="howtoKeys">
         <span><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> / drag: spin</span>
         <span><kbd>↑</kbd> boost · <kbd>↓</kbd> slam · <kbd>Space</kbd> super</span>
-        <span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> planets · <kbd>P</kbd> pause</span>
+        <span><kbd>P</kbd> pause</span>
       </div>
     </div>
     <button class="btn btn-orange btn-back" id="howtoGo">LET'S CRUSH!</button>
